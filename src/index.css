@@ -1,0 +1,54 @@
+@import "tailwindcss";
+
+@theme {
+  --color-background: #0B0B10;
+  --color-surface: #15151F;
+  --color-surface-hover: #1E1E2A;
+  --color-gold: #D4AF37;
+  --color-gold-muted: #B8860B;
+  --color-purple-royal: #6D28D9;
+  --color-purple-light: #8B5CF6;
+  --color-purple-glow: rgba(109, 40, 217, 0.3);
+  --color-text-white: #F8FAFC;
+  --color-text-muted: #9CA3AF;
+  --color-danger: #EF4444;
+  --color-success: #22C55E;
+  
+  --font-sans: 'Inter', system-ui, sans-serif;
+  --font-display: 'Cinzel', 'Space Grotesk', serif;
+
+  --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
+  --shadow-purple: 0 0 30px rgba(109, 40, 217, 0.2);
+}
+
+@layer base {
+  body {
+    @apply bg-background text-text-white font-sans antialiased;
+    background-image: 
+      radial-gradient(circle at 0% 0%, rgba(109, 40, 217, 0.08) 0%, transparent 40%),
+      radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.05) 0%, transparent 40%);
+    background-attachment: fixed;
+  }
+}
+
+@layer components {
+  .glass-card {
+    @apply bg-surface/80 backdrop-blur-md border border-white/5 rounded-2xl shadow-xl transition-all duration-300;
+  }
+  
+  .glass-card-hover {
+    @apply hover:border-white/10 hover:shadow-purple hover:-translate-y-1;
+  }
+
+  .gold-gradient-text {
+    @apply bg-gradient-to-br from-gold via-white to-gold-muted bg-clip-text text-transparent;
+  }
+
+  .premium-gradient-card {
+    background:
+      linear-gradient(145deg, rgba(212, 175, 55, 0.12), transparent 42%),
+      linear-gradient(315deg, rgba(109, 40, 217, 0.14), transparent 48%),
+      rgba(21, 21, 31, 0.86);
+    border-color: rgba(212, 175, 55, 0.18);
+  }
+}
