@@ -153,10 +153,10 @@ export default function Members() {
             <div className="px-6 -mt-12 pb-6 flex-1 flex flex-col relative z-10">
               {/* Avatar & Basic Info */}
               <div className="flex items-end gap-4 mb-6">
-                <div className="w-24 h-24 rounded-2xl bg-surface border-4 border-background shadow-2xl flex items-center justify-center text-3xl font-black text-gold overflow-hidden relative group-hover:scale-105 transition-transform">
-                  {member.playerName.substring(0, 2).toUpperCase()}
-                  <div className="absolute inset-0 bg-gradient-to-t from-background/80 to-transparent" />
-                </div>
+                <HeroIcon
+                  heroName={member.mainHeroes[0]}
+                  className="w-24 h-24 hero-token border-4 border-background shadow-2xl group-hover:scale-105 transition-transform"
+                />
                 <div className="mb-2">
                   <h3 className="text-2xl font-black text-white uppercase tracking-tighter leading-none mb-1 group-hover:gold-gradient-text transition-all">
                     {member.playerName}

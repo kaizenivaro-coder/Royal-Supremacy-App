@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0B0B10;
-  --color-surface: #15151F;
-  --color-surface-hover: #1E1E2A;
-  --color-gold: #D4AF37;
-  --color-gold-muted: #B8860B;
-  --color-purple-royal: #6D28D9;
-  --color-purple-light: #8B5CF6;
-  --color-purple-glow: rgba(109, 40, 217, 0.3);
-  --color-text-white: #F8FAFC;
-  --color-text-muted: #9CA3AF;
-  --color-danger: #EF4444;
-  --color-success: #22C55E;
+  --color-background: #07101f;
+  --color-surface: #101a31;
+  --color-surface-hover: #172847;
+  --color-gold: #f2c453;
+  --color-gold-muted: #b97a22;
+  --color-purple-royal: #2358d6;
+  --color-purple-light: #5fb7ff;
+  --color-purple-glow: rgba(35, 88, 214, 0.34);
+  --color-text-white: #f7fbff;
+  --color-text-muted: #91a8c7;
+  --color-danger: #ff4d5e;
+  --color-success: #24d18f;
   
   --font-sans: 'Inter', system-ui, sans-serif;
   --font-display: 'Cinzel', 'Space Grotesk', serif;
@@ -24,31 +24,72 @@
 @layer base {
   body {
     @apply bg-background text-text-white font-sans antialiased;
-    background-image: 
-      radial-gradient(circle at 0% 0%, rgba(109, 40, 217, 0.08) 0%, transparent 40%),
-      radial-gradient(circle at 100% 100%, rgba(212, 175, 55, 0.05) 0%, transparent 40%);
+    background-image:
+      linear-gradient(115deg, rgba(22, 53, 110, 0.34), transparent 34%),
+      linear-gradient(245deg, rgba(185, 122, 34, 0.14), transparent 38%),
+      linear-gradient(rgba(95, 183, 255, 0.035) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(95, 183, 255, 0.035) 1px, transparent 1px);
     background-attachment: fixed;
+    background-size: auto, auto, 48px 48px, 48px 48px;
   }
 }
 
 @layer components {
   .glass-card {
-    @apply bg-surface/80 backdrop-blur-md border border-white/5 rounded-2xl shadow-xl transition-all duration-300;
+    @apply bg-surface/88 backdrop-blur-md border border-blue-200/10 shadow-xl transition-all duration-300;
+    clip-path: polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.06), 0 22px 60px rgba(0,0,0,0.28);
   }
   
   .glass-card-hover {
-    @apply hover:border-white/10 hover:shadow-purple hover:-translate-y-1;
+    @apply hover:border-gold/35 hover:shadow-purple hover:-translate-y-1;
   }
 
   .gold-gradient-text {
-    @apply bg-gradient-to-br from-gold via-white to-gold-muted bg-clip-text text-transparent;
+    @apply bg-gradient-to-br from-white via-gold to-gold-muted bg-clip-text text-transparent;
   }
 
   .premium-gradient-card {
     background:
-      linear-gradient(145deg, rgba(212, 175, 55, 0.12), transparent 42%),
-      linear-gradient(315deg, rgba(109, 40, 217, 0.14), transparent 48%),
-      rgba(21, 21, 31, 0.86);
-    border-color: rgba(212, 175, 55, 0.18);
+      linear-gradient(145deg, rgba(242, 196, 83, 0.16), transparent 42%),
+      linear-gradient(315deg, rgba(35, 88, 214, 0.22), transparent 48%),
+      rgba(16, 26, 49, 0.9);
+    border-color: rgba(242, 196, 83, 0.24);
+  }
+
+  .battle-panel {
+    position: relative;
+    overflow: hidden;
+    background:
+      linear-gradient(135deg, rgba(14, 31, 62, 0.96), rgba(7, 16, 31, 0.92) 58%, rgba(28, 57, 102, 0.94)),
+      linear-gradient(90deg, rgba(242, 196, 83, 0.1), transparent 26%, rgba(95, 183, 255, 0.12));
+    border: 1px solid rgba(95, 183, 255, 0.2);
+    clip-path: polygon(0 0, calc(100% - 28px) 0, 100% 28px, 100% 100%, 28px 100%, 0 calc(100% - 28px));
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.08), 0 28px 80px rgba(0,0,0,0.38);
+  }
+
+  .battle-panel::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+      linear-gradient(90deg, rgba(242, 196, 83, 0.25), transparent 18%, transparent 82%, rgba(95, 183, 255, 0.18)),
+      repeating-linear-gradient(115deg, transparent 0 20px, rgba(255,255,255,0.025) 20px 21px);
+    opacity: 0.75;
+  }
+
+  .battle-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(242, 196, 83, 0.55), rgba(95, 183, 255, 0.3), transparent);
+  }
+
+  .mlbb-title {
+    text-shadow: 0 3px 0 rgba(0,0,0,0.32), 0 0 22px rgba(95,183,255,0.18);
+  }
+
+  .hero-token {
+    @apply border border-gold/40 bg-background/70 shadow-lg;
+    box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 18px rgba(242,196,83,0.14);
   }
 }

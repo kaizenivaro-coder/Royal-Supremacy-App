@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getNextScheduledEvent } from "../lib/appInsights";
+import { HeroIcon } from "../components/HeroIcon";
 
 export default function Dashboard() {
   const { members, matches, schedule, announcements, tryouts, isAdmin } = useAppStore();
@@ -35,27 +36,100 @@ export default function Dashboard() {
   return (
     <div className="space-y-8 pb-10">
       {/* Hero Section */}
-      <section className="relative overflow-hidden rounded-[2rem] p-8 md:p-12 border border-white/5 bg-surface shadow-2xl">
-        <div className="absolute top-0 right-0 w-1/2 h-full opacity-20 pointer-events-none">
-          <div className="absolute top-[-10%] right-[-10%] w-[120%] h-[120%] bg-[radial-gradient(circle_at_center,var(--color-purple-royal),transparent_70%)]" />
-        </div>
-        
-        <div className="relative z-10 max-w-2xl">
-          <Badge variant="gold" className="mb-4">Operational Status: Ready</Badge>
-          <h1 className="text-4xl md:text-6xl font-display font-black text-white mb-4 tracking-tighter uppercase leading-none">
-            Welcome, <span className="gold-gradient-text">Commander</span>
+      <section className="battle-panel p-6 md:p-10">
+        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="lg:col-span-7">
+          <Badge variant="gold" className="mb-5">Squad Lobby: Ready</Badge>
+          <h1 className="text-4xl md:text-6xl font-display font-black text-white mb-4 uppercase leading-none mlbb-title">
+            Enter the <span className="gold-gradient-text">Land of Dawn</span>
           </h1>
-          <p className="text-lg text-text-muted font-medium mb-8 max-w-lg">
-            Royal Supremacy operational dashboard. Monitor squad performance, 
-            manage upcoming operations, and maintain dominance in the Land of Dawn.
+          <p className="text-lg text-text-muted font-medium mb-8 max-w-xl">
+            Track heroes, ranked pressure, operations, and battle records from
+            one Royal Supremacy command lobby.
           </p>
           <div className="flex flex-wrap gap-4">
             <Link to="/schedule">
               <Button variant="gold" className="gap-2">
                 <CalendarIcon size={18} />
-                View Operations
+                Queue Operations
               </Button>
             </Link>
+            <Link to="/members">
+              <Button variant="secondary" className="gap-2">
+                <Users size={18} />
+                Hero Roster
+              </Button>
+            </Link>
+          </div>
+          <div className="battle-divider mt-8 max-w-xl" />
+          <div className="mt-5 grid grid-cols-3 gap-3 max-w-lg">
+            <div>
+              <div className="text-2xl font-black text-white">{members.length}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                Squad
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-gold">{matches.length}</div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                Battles
+              </div>
+            </div>
+            <div>
+              <div className="text-2xl font-black text-purple-light">
+                {nextOperation ? nextOperation.time : "--"}
+              </div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                Next Call
+              </div>
+            </div>
+          </div>
+          </div>
+
+          <div className="lg:col-span-5">
+            <div className="grid grid-cols-3 gap-3 sm:gap-4">
+              {topPlayers.slice(0, 3).map((player, index) => (
+                <div
+                  key={player.id}
+                  className={cn(
+                    "relative p-3 bg-background/55 border border-blue-200/15",
+                    index === 0 ? "translate-y-0" : "translate-y-6",
+                  )}
+                >
+                  <div className="absolute -top-2 -left-2 h-6 w-6 bg-gold text-background text-[10px] font-black flex items-center justify-center">
+                    {index + 1}
+                  </div>
+                  <HeroIcon
+                    heroName={player.mainHeroes[0]}
+                    className="hero-token aspect-square w-full"
+                  />
+                  <div className="mt-3 text-center">
+                    <div className="truncate text-xs font-black uppercase text-white">
+                      {player.playerName}
+                    </div>
+                    <div className="text-[10px] font-black uppercase tracking-widest text-gold">
+                      {player.mainHeroes[0]}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="mt-8 border border-gold/20 bg-background/50 p-4">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Next Operation
+                </span>
+                <Badge variant="purple">{nextOperation?.type || "Standby"}</Badge>
+              </div>
+              <div className="mt-2 text-lg font-black text-white">
+                {nextOperation?.title || "Awaiting Orders"}
+              </div>
+              <div className="text-xs font-bold text-text-muted">
+                {nextOperation
+                  ? `${nextOperation.date} at ${nextOperation.time}`
+                  : "No queued operation"}
+              </div>
+            </div>
           </div>
         </div>
       </section>
@@ -63,7 +137,7 @@ export default function Dashboard() {
       {/* Grid Layout */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 rounded-2xl bg-gold/10 flex items-center justify-center text-gold shrink-0 border border-gold/20 group-hover:bg-gold/20 transition-colors">
+          <div className="w-14 h-14 bg-gold/10 flex items-center justify-center text-gold shrink-0 border border-gold/25 group-hover:bg-gold/20 transition-colors">
             <Users size={28} />
           </div>
           <div>
@@ -76,7 +150,7 @@ export default function Dashboard() {
         </Card>
 
         <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 rounded-2xl bg-purple-royal/20 flex items-center justify-center text-purple-light shrink-0 border border-purple-royal/30 group-hover:bg-purple-royal/30 transition-colors">
+          <div className="w-14 h-14 bg-purple-royal/20 flex items-center justify-center text-purple-light shrink-0 border border-purple-royal/35 group-hover:bg-purple-royal/30 transition-colors">
             <Zap size={28} />
           </div>
           <div>
@@ -91,7 +165,7 @@ export default function Dashboard() {
         </Card>
 
         <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 rounded-2xl bg-success/10 flex items-center justify-center text-success shrink-0 border border-success/20 group-hover:bg-success/20 transition-colors">
+          <div className="w-14 h-14 bg-success/10 flex items-center justify-center text-success shrink-0 border border-success/20 group-hover:bg-success/20 transition-colors">
             <Swords size={28} />
           </div>
           <div>
@@ -102,7 +176,7 @@ export default function Dashboard() {
         </Card>
 
         <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center text-orange-400 shrink-0 border border-orange-500/20 group-hover:bg-orange-500/20 transition-colors">
+          <div className="w-14 h-14 bg-orange-500/10 flex items-center justify-center text-orange-400 shrink-0 border border-orange-500/20 group-hover:bg-orange-500/20 transition-colors">
             <UserPlus size={28} />
           </div>
           <div>
@@ -162,7 +236,7 @@ export default function Dashboard() {
 
           <Card>
             <div className="flex items-center justify-between mb-8">
-              <h3 className="font-display font-black text-2xl uppercase tracking-tighter">
+              <h3 className="font-display font-black text-2xl uppercase">
                 Recent Battles
               </h3>
               <Link to="/matches">
@@ -175,7 +249,7 @@ export default function Dashboard() {
               {recentMatches.map((match) => (
                 <div
                   key={match.id}
-                  className="p-5 rounded-2xl bg-surface-hover/30 border border-white/5 hover:border-white/10 transition-all group"
+                  className="p-5 bg-surface-hover/35 border border-blue-200/10 hover:border-gold/25 transition-all group"
                 >
                   <div className="flex items-center justify-between mb-3">
                     <Badge variant={match.result === "Win" ? "success" : "danger"}>

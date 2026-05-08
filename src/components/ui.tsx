@@ -12,7 +12,7 @@ export function Card({
       className={cn(
         glass
           ? "glass-card"
-          : "bg-surface border border-white/5 rounded-2xl p-6 shadow-xl",
+          : "bg-surface border border-blue-200/10 p-6 shadow-xl",
         className,
       )}
       {...props}
@@ -33,16 +33,16 @@ export function Button({
   size?: "sm" | "default" | "lg" | "icon";
 }) {
   const base =
-    "inline-flex items-center justify-center font-bold transition-all rounded-xl focus:outline-none focus:ring-2 focus:ring-gold/50 active:scale-95 disabled:opacity-50 disabled:pointer-events-none uppercase tracking-wider";
+    "inline-flex items-center justify-center font-black transition-all focus:outline-none focus:ring-2 focus:ring-gold/60 active:scale-95 disabled:opacity-50 disabled:pointer-events-none uppercase tracking-wider";
   const variants = {
     primary:
-      "bg-purple-royal hover:bg-purple-light text-white shadow-lg shadow-purple-royal/20 border border-white/10",
+      "bg-gradient-to-r from-purple-royal to-[#1e8bf5] hover:from-[#2d67f1] hover:to-purple-light text-white shadow-lg shadow-purple-royal/30 border border-blue-200/20",
     secondary:
-      "bg-surface-hover hover:bg-white/10 text-white border border-white/10",
-    gold: "bg-gold hover:bg-gold-muted text-background shadow-lg shadow-gold/20",
+      "bg-surface-hover hover:bg-[#203965] text-white border border-blue-200/15",
+    gold: "bg-gradient-to-r from-gold-muted to-gold hover:from-gold hover:to-white text-background shadow-lg shadow-gold/25 border border-gold/40",
     danger:
       "bg-danger/20 text-danger hover:bg-danger/30 border border-danger/20",
-    ghost: "bg-transparent hover:bg-white/5 text-text-muted hover:text-white",
+    ghost: "bg-transparent hover:bg-white/5 text-text-muted hover:text-white border border-transparent",
   };
   const sizes = {
     sm: "h-8 px-3 text-[10px]",
@@ -54,6 +54,12 @@ export function Button({
   return (
     <button
       className={cn(base, variants[variant], sizes[size], className)}
+      style={{
+        clipPath:
+          size === "icon"
+            ? undefined
+            : "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))",
+      }}
       {...props}
     >
       {children}
@@ -69,10 +75,10 @@ export function Badge({
   variant?: "default" | "gold" | "purple" | "success" | "danger" | "warning";
 }) {
   const variants = {
-    default: "bg-white/5 text-text-muted border border-white/10",
-    gold: "bg-gold/10 text-gold border border-gold/30 shadow-[0_0_10px_rgba(212,175,55,0.1)]",
+    default: "bg-white/5 text-text-muted border border-blue-200/10",
+    gold: "bg-gold/10 text-gold border border-gold/35 shadow-[0_0_10px_rgba(242,196,83,0.14)]",
     purple:
-      "bg-purple-royal/20 text-purple-light border border-purple-royal/30",
+      "bg-purple-royal/20 text-purple-light border border-purple-royal/35",
     success: "bg-success/10 text-success border border-success/30",
     danger: "bg-danger/10 text-danger border border-danger/30",
     warning: "bg-orange-500/10 text-orange-400 border border-orange-500/30",
@@ -98,7 +104,7 @@ export function Input({
   return (
     <input
       className={cn(
-        "flex h-11 w-full rounded-xl border border-white/10 bg-surface-hover/50 px-4 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        "flex h-11 w-full border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
         className,
       )}
       {...props}
@@ -113,7 +119,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        "flex min-h-[80px] w-full rounded-xl border border-white/10 bg-surface-hover/50 px-4 py-2 text-sm text-white placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        "flex min-h-[80px] w-full border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
         className,
       )}
       {...props}
@@ -129,7 +135,7 @@ export function Select({
   return (
     <select
       className={cn(
-        "flex h-11 w-full appearance-none rounded-xl border border-white/10 bg-surface-hover/50 px-4 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        "flex h-11 w-full appearance-none border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
         className,
       )}
       {...props}
@@ -166,7 +172,7 @@ export function PageHeader({
   return (
     <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 text-left">
       <div>
-        <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-2 tracking-tighter uppercase shrink-0">
+        <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-2 uppercase shrink-0 mlbb-title">
           <span className="gold-gradient-text">{title}</span>
         </h1>
         {description && (

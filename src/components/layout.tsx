@@ -51,16 +51,17 @@ export default function RootLayout() {
   return (
     <div className="flex bg-background min-h-screen text-text-white">
       {/* Mobile nav header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-surface/90 backdrop-blur-md border-b border-white/5 flex items-center justify-between px-4 z-50">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-16 bg-surface/95 backdrop-blur-md border-b border-gold/20 flex items-center justify-between px-4 z-50">
         <div className="flex items-center gap-2 text-gold">
           <Crown className="w-6 h-6" />
-          <span className="font-display font-bold text-lg tracking-wider">
+          <span className="font-display font-bold text-lg tracking-wider mlbb-title">
             ROYAL SUPREMACY
           </span>
         </div>
         <button
           onClick={toggleMenu}
           className="p-2 text-text-muted hover:text-white transition"
+          aria-label="Toggle navigation"
         >
           {mobileMenuOpen ? (
             <X className="w-6 h-6" />
@@ -82,13 +83,14 @@ export default function RootLayout() {
       <aside
         className={cn(
           "fixed inset-y-0 left-0 z-50 w-64 bg-surface border-r border-white/5 transform transition-transform duration-300 lg:relative lg:translate-x-0 h-screen overflow-y-auto",
+          "lg:bg-[#081225]/95 lg:border-r-gold/15",
           mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
         )}
       >
-        <div className="p-6 hidden lg:flex items-center gap-3 text-gold">
+        <div className="p-6 hidden lg:flex items-center gap-3 text-gold border-b border-blue-200/10">
           <Crown className="w-8 h-8 drop-shadow-[0_0_8px_rgba(212,175,55,0.4)]" />
           <div className="flex flex-col uppercase">
-            <span className="font-display font-bold text-lg leading-tight tracking-[0.2em] text-gold">
+            <span className="font-display font-bold text-lg leading-tight tracking-[0.2em] text-gold mlbb-title">
               ROYAL
             </span>
             <span className="font-display font-semibold text-sm leading-tight tracking-[0.1em] text-white/90">
@@ -99,7 +101,7 @@ export default function RootLayout() {
 
         <nav className="p-4 space-y-1 mt-16 lg:mt-0">
           <div className="text-xs font-semibold text-text-muted/60 uppercase tracking-wider mb-4 px-3">
-            Command Center
+            Land of Dawn Ops
           </div>
           {navItems.map((item) => {
             const Icon = item.icon;
@@ -114,8 +116,8 @@ export default function RootLayout() {
                 className={cn(
                   "flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 group",
                   isActive
-                    ? "bg-purple-royal/20 text-gold border border-purple-royal/30 shadow-[0_0_15px_rgba(109,40,217,0.15)]"
-                    : "text-text-muted hover:bg-surface-hover hover:text-white",
+                    ? "bg-gradient-to-r from-purple-royal/30 to-gold/10 text-gold border border-gold/30 shadow-[0_0_18px_rgba(95,183,255,0.12)]"
+                    : "text-text-muted hover:bg-surface-hover hover:text-white hover:border-blue-200/10 border border-transparent",
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -135,7 +137,7 @@ export default function RootLayout() {
           })}
         </nav>
 
-        <div className="absolute bottom-8 left-4 right-4 p-4 rounded-xl bg-background/50 border border-white/5">
+        <div className="absolute bottom-8 left-4 right-4 p-4 bg-background/70 border border-gold/15">
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
             <span className="text-[10px] uppercase tracking-widest font-bold text-text-muted">
@@ -150,18 +152,18 @@ export default function RootLayout() {
 
       {/* Main Content */}
       <main className="flex-1 w-full min-h-screen pt-16 lg:pt-0">
-        <div className="hidden lg:block border-b border-white/5 bg-background/70 backdrop-blur-xl sticky top-0 z-30">
+        <div className="hidden lg:block border-b border-gold/15 bg-background/80 backdrop-blur-xl sticky top-0 z-30">
           <div className="max-w-7xl mx-auto px-8 py-4 flex items-center justify-between gap-6">
             <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                Royal Supremacy
+              <p className="text-[10px] font-black uppercase tracking-widest text-gold">
+                Land of Dawn Command
               </p>
-              <h2 className="font-display text-2xl font-black uppercase text-white">
+              <h2 className="font-display text-2xl font-black uppercase text-white mlbb-title">
                 {activePage?.name || "Command Center"}
               </h2>
             </div>
             <div className="flex items-center gap-3">
-              <div className="px-4 py-3 rounded-xl bg-surface/70 border border-white/5 min-w-32">
+              <div className="px-4 py-3 bg-surface/80 border border-blue-200/10 min-w-32">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
                   <Activity size={13} className="text-success" />
                   Active
@@ -170,14 +172,14 @@ export default function RootLayout() {
                   {activeMembers}/{members.length}
                 </div>
               </div>
-              <div className="px-4 py-3 rounded-xl bg-surface/70 border border-white/5 min-w-32">
+              <div className="px-4 py-3 bg-surface/80 border border-blue-200/10 min-w-32">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
                   <Trophy size={13} className="text-gold" />
                   Win Rate
                 </div>
                 <div className="text-lg font-black text-white">{winRate}%</div>
               </div>
-              <div className="px-4 py-3 rounded-xl bg-surface/70 border border-white/5 min-w-44">
+              <div className="px-4 py-3 bg-surface/80 border border-blue-200/10 min-w-44">
                 <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
                   <CalendarDays size={13} className="text-purple-light" />
                   Next
