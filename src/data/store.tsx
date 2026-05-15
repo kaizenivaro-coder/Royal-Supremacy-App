@@ -17,6 +17,12 @@ import {
   mockAnnouncements,
   mockTryouts,
 } from "./mock";
+import {
+  AuthUser,
+  createLocalAccount,
+  LocalAuthAccount,
+  verifyLocalCredentials,
+} from "../lib/localAuth";
 
 interface AppState {
   members: Member[];
@@ -27,6 +33,12 @@ interface AppState {
   announcements: Announcement[];
   tryouts: Tryout[];
   isAdmin: boolean;
+  authUser: AuthUser | null;
+}
+
+interface AuthActionResult {
+  ok: boolean;
+  error?: string;
 }
 
 interface AppContextType extends AppState {
@@ -38,6 +50,9 @@ interface AppContextType extends AppState {
   setAnnouncements: (a: Announcement[]) => void;
   setTryouts: (t: Tryout[]) => void;
   setIsAdmin: (isAdmin: boolean) => void;
+  login: (identifier: string, password: string) => Promise<AuthActionResult>;
+  signup: (identifier: string, password: string) => Promise<AuthActionResult>;
+  logout: () => void;
   resetData: () => void;
 }
 
@@ -50,12 +65,23 @@ const defaultState: AppState = {
   announcements: mockAnnouncements,
   tryouts: mockTryouts,
   isAdmin: false,
+  authUser: null,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
+const persistedDataKeys = [
+  "members",
+  "teams",
+  "schedule",
+  "matches",
+  "points",
+  "announcements",
+  "tryouts",
+  "isAdmin",
+];
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
-  const loadData = (key: string, _default: any) => {
+  const loadData = <T,>(key: string, _default: T): T => {
     try {
       const data = localStorage.getItem(`royal_supremacy_${key}`);
       return data ? JSON.parse(data) : _default;
@@ -87,6 +113,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const [isAdmin, setIsAdminState] = useState<boolean>(
     loadData("isAdmin", defaultState.isAdmin),
+  );
+  const [authAccounts, setAuthAccountsState] = useState<LocalAuthAccount[]>(
+    loadData("auth_accounts", []),
+  );
+  const [authUser, setAuthUserState] = useState<AuthUser | null>(
+    loadData("auth_session", defaultState.authUser),
   );
 
   const setMembers = (m: Member[]) => {
@@ -122,8 +154,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     localStorage.setItem("royal_supremacy_isAdmin", JSON.stringify(a));
   };
 
+  const persistAuthAccounts = (accounts: LocalAuthAccount[]) => {
+    setAuthAccountsState(accounts);
+    localStorage.setItem("royal_supremacy_auth_accounts", JSON.stringify(accounts));
+  };
+
+  const setAuthSession = (user: AuthUser | null) => {
+    setAuthUserState(user);
+    if (user) {
+      localStorage.setItem("royal_supremacy_auth_session", JSON.stringify(user));
+    } else {
+      localStorage.removeItem("royal_supremacy_auth_session");
+    }
+  };
+
+  const signup = async (identifier: string, password: string) => {
+    const result = await createLocalAccount(authAccounts, identifier, password);
+    if (result.error) {
+      return { ok: false, error: result.error };
+    }
+
+    persistAuthAccounts(result.accounts);
+    setAuthSession(result.user);
+    return { ok: true };
+  };
+
+  const login = async (identifier: string, password: string) => {
+    const result = await verifyLocalCredentials(authAccounts, identifier, password);
+    if (result.error) {
+      return { ok: false, error: result.error };
+    }
+
+    setAuthSession(result.user);
+    return { ok: true };
+  };
+
+  const logout = () => {
+    setAuthSession(null);
+  };
+
   const resetData = () => {
-    localStorage.clear();
+    persistedDataKeys.forEach((key) => {
+      localStorage.removeItem(`royal_supremacy_${key}`);
+    });
     setMembersState(defaultState.members);
     setTeamsState(defaultState.teams);
     setScheduleState(defaultState.schedule);
@@ -145,6 +218,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         announcements,
         tryouts,
         isAdmin,
+        authUser,
         setMembers,
         setTeams,
         setSchedule,
@@ -153,6 +227,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAnnouncements,
         setTryouts,
         setIsAdmin,
+        login,
+        signup,
+        logout,
         resetData,
       }}
     >

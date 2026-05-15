@@ -16,6 +16,7 @@ import {
   X,
   CalendarDays,
   Activity,
+  LogOut,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../lib/utils";
@@ -39,12 +40,13 @@ const navItems = [
 export default function RootLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { isAdmin, members, matches, schedule } = useAppStore();
+  const { isAdmin, members, matches, schedule, authUser, logout } = useAppStore();
   const activePage = navItems.find((item) => item.path === location.pathname);
   const activeMembers = members.filter((member) => member.status === "Active").length;
   const wins = matches.filter((match) => match.result === "Win").length;
   const winRate = matches.length ? Math.round((wins / matches.length) * 100) : 0;
   const nextOperation = getNextScheduledEvent(schedule);
+  const commanderName = authUser?.username ?? "Commander";
 
   const toggleMenu = () => setMobileMenuOpen(!mobileMenuOpen);
 
@@ -141,12 +143,20 @@ export default function RootLayout() {
           <div className="flex items-center gap-3 mb-2">
             <div className="w-2 h-2 rounded-full bg-success animate-pulse" />
             <span className="text-[10px] uppercase tracking-widest font-bold text-text-muted">
-              Squad Status
+              Signed In
             </span>
           </div>
-          <div className="text-xs font-semibold text-white">
-            Operational: Ready
+          <div className="truncate text-xs font-semibold text-white">
+            {commanderName}
           </div>
+          <button
+            type="button"
+            onClick={logout}
+            className="mt-3 flex w-full items-center justify-center gap-2 border border-blue-200/10 bg-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-text-muted transition hover:border-gold/25 hover:text-white"
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            Sign Out
+          </button>
         </div>
       </aside>
 
@@ -188,6 +198,15 @@ export default function RootLayout() {
                   {nextOperation ? nextOperation.title : "Standby"}
                 </div>
               </div>
+              <button
+                type="button"
+                onClick={logout}
+                aria-label="Sign out"
+                className="flex h-[68px] items-center justify-center gap-2 border border-gold/20 bg-gold/10 px-4 text-[10px] font-black uppercase tracking-wider text-gold transition hover:border-gold/45 hover:bg-gold/15"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </button>
             </div>
           </div>
         </div>

@@ -3,10 +3,11 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { AppProvider } from "./data/store";
+import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { AppProvider, useAppStore } from "./data/store";
 import RootLayout from "./components/layout";
 
+import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Members from "./pages/Members";
 import Teams from "./pages/Teams";
@@ -19,12 +20,34 @@ import Tryouts from "./pages/Tryouts";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 
+function RequireAuth() {
+  const { authUser } = useAppStore();
+  const location = useLocation();
+
+  if (!authUser) {
+    return <Navigate to="/auth" replace state={{ from: location }} />;
+  }
+
+  return <RootLayout />;
+}
+
+function AuthRoute() {
+  const { authUser } = useAppStore();
+
+  if (authUser) {
+    return <Navigate to="/" replace />;
+  }
+
+  return <Auth />;
+}
+
 export default function App() {
   return (
     <AppProvider>
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<RootLayout />}>
+          <Route path="/auth" element={<AuthRoute />} />
+          <Route path="/" element={<RequireAuth />}>
             <Route index element={<Dashboard />} />
             <Route path="members" element={<Members />} />
             <Route path="teams" element={<Teams />} />
@@ -37,6 +60,7 @@ export default function App() {
             <Route path="admin" element={<Admin />} />
             <Route path="profile" element={<Profile />} />
           </Route>
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </AppProvider>
