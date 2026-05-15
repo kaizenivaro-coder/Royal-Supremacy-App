@@ -37,16 +37,16 @@ export function normalizeIdentifier(identifier: string) {
   return identifier.trim().toLowerCase();
 }
 
+export function normalizeUsername(username: string) {
+  return normalizeIdentifier(username);
+}
+
 function isEmailIdentifier(identifier: string) {
   return identifier.includes("@");
 }
 
 function isValidEmail(identifier: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(identifier);
-}
-
-function usernameFromEmail(email: string) {
-  return email.split("@")[0] || email;
 }
 
 function getAccountIdentifiers(account: LocalAuthAccount) {
@@ -73,7 +73,29 @@ function toAuthUser(account: LocalAuthAccount): AuthUser {
   };
 }
 
-function validateCredentials(identifier: string, password: string) {
+function isValidUsername(username: string) {
+  return /^[a-z0-9_]{3,20}$/.test(username);
+}
+
+function validateUsernameForSignup(identifier: string) {
+  const normalizedIdentifier = normalizeIdentifier(identifier);
+
+  if (!normalizedIdentifier) {
+    return "Enter a username.";
+  }
+
+  if (isEmailIdentifier(normalizedIdentifier)) {
+    return "Use a username to create an account. You can add email in your profile.";
+  }
+
+  if (!isValidUsername(normalizedIdentifier)) {
+    return "Usernames must be 3-20 characters using lowercase letters, numbers, or underscores.";
+  }
+
+  return undefined;
+}
+
+function validateLoginIdentifier(identifier: string) {
   const normalizedIdentifier = normalizeIdentifier(identifier);
 
   if (!normalizedIdentifier) {
@@ -84,6 +106,10 @@ function validateCredentials(identifier: string, password: string) {
     return "Use a valid email or username.";
   }
 
+  return undefined;
+}
+
+function validatePassword(password: string) {
   if (password.length < 4) {
     return "Password must be at least 4 characters.";
   }
@@ -124,7 +150,7 @@ export async function createLocalAccount(
   password: string,
   options: CreateAccountOptions = {},
 ): Promise<LocalAuthResult> {
-  const validationError = validateCredentials(identifier, password);
+  const validationError = validateUsernameForSignup(identifier) ?? validatePassword(password);
   if (validationError) {
     return { error: validationError };
   }
@@ -134,13 +160,10 @@ export async function createLocalAccount(
   }
 
   const normalized = normalizeIdentifier(identifier);
-  const email = isEmailIdentifier(normalized) ? normalized : undefined;
-  const username = email ? usernameFromEmail(email) : identifier.trim();
   const id = options.id ?? createAccountId();
   const account: LocalAuthAccount = {
     id,
-    username,
-    email,
+    username: normalized,
     passwordHash: await hashPassword(id, password),
     createdAt: (options.now ?? new Date()).toISOString(),
   };
@@ -158,7 +181,7 @@ export async function verifyLocalCredentials(
   identifier: string,
   password: string,
 ): Promise<LocalAuthResult> {
-  const validationError = validateCredentials(identifier, password);
+  const validationError = validateLoginIdentifier(identifier) ?? validatePassword(password);
   if (validationError) {
     return { error: validationError };
   }
@@ -177,5 +200,44 @@ export async function verifyLocalCredentials(
     account,
     accounts,
     user: toAuthUser(account),
+  };
+}
+
+export function connectAccountEmail(
+  accounts: LocalAuthAccount[],
+  accountId: string,
+  email: string,
+): LocalAuthResult {
+  const normalizedEmail = normalizeIdentifier(email);
+
+  if (!normalizedEmail) {
+    return { error: "Enter an email address." };
+  }
+
+  if (!isValidEmail(normalizedEmail)) {
+    return { error: "Enter a valid email address." };
+  }
+
+  const account = accounts.find((item) => item.id === accountId);
+  if (!account) {
+    return { error: "No signed-in account found." };
+  }
+
+  const emailOwner = accounts.find(
+    (item) => item.id !== accountId && item.email === normalizedEmail,
+  );
+  if (emailOwner) {
+    return { error: "That email is already connected to another account." };
+  }
+
+  const updatedAccount = { ...account, email: normalizedEmail };
+  const nextAccounts = accounts.map((item) =>
+    item.id === accountId ? updatedAccount : item,
+  );
+
+  return {
+    account: updatedAccount,
+    accounts: nextAccounts,
+    user: toAuthUser(updatedAccount),
   };
 }

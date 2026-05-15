@@ -19,6 +19,7 @@ import {
 } from "./mock";
 import {
   AuthUser,
+  connectAccountEmail,
   createLocalAccount,
   LocalAuthAccount,
   verifyLocalCredentials,
@@ -52,6 +53,7 @@ interface AppContextType extends AppState {
   setIsAdmin: (isAdmin: boolean) => void;
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
+  connectEmail: (email: string) => Promise<AuthActionResult>;
   logout: () => void;
   resetData: () => void;
 }
@@ -189,6 +191,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { ok: true };
   };
 
+  const connectEmail = async (email: string) => {
+    if (!authUser) {
+      return { ok: false, error: "No signed-in account found." };
+    }
+
+    const result = connectAccountEmail(authAccounts, authUser.id, email);
+    if (result.error) {
+      return { ok: false, error: result.error };
+    }
+
+    persistAuthAccounts(result.accounts);
+    setAuthSession(result.user);
+    return { ok: true };
+  };
+
   const logout = () => {
     setAuthSession(null);
   };
@@ -229,6 +246,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setIsAdmin,
         login,
         signup,
+        connectEmail,
         logout,
         resetData,
       }}

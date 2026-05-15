@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { Button, Input, Label } from "../components/ui";
 import { useAppStore } from "../data/store";
+import { normalizeUsername } from "../lib/localAuth";
 import { cn } from "../lib/utils";
 
 type AuthMode = "login" | "signup";
@@ -43,6 +44,11 @@ export default function Auth() {
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setError("");
+    setIdentifier("");
+  };
+
+  const handleIdentifierChange = (value: string) => {
+    setIdentifier(isSignup ? normalizeUsername(value) : value);
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -146,15 +152,18 @@ export default function Auth() {
 
                 <form className="space-y-5" onSubmit={handleSubmit} data-testid="auth-form">
                   <div>
-                    <Label htmlFor="identifier">Email or Username</Label>
+                    <Label htmlFor="identifier">
+                      {isSignup ? "Username" : "Username or Email"}
+                    </Label>
                     <div className="relative">
                       <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
                       <Input
                         id="identifier"
                         value={identifier}
-                        onChange={(event) => setIdentifier(event.target.value)}
-                        placeholder="kingchoou or you@example.com"
+                        onChange={(event) => handleIdentifierChange(event.target.value)}
                         autoComplete="username"
+                        autoCapitalize="none"
+                        spellCheck={false}
                         className="h-[52px] pl-11"
                       />
                     </div>
@@ -169,7 +178,6 @@ export default function Auth() {
                         type="password"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
-                        placeholder="Squad password"
                         autoComplete={isSignup ? "new-password" : "current-password"}
                         className="h-[52px] pl-11"
                       />
@@ -207,7 +215,7 @@ export default function Auth() {
 
                 <div className="mt-7 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-text-muted">
                   <Sparkles className="h-3.5 w-3.5 text-gold" />
-                  Honor. Order. Victory.
+                  For Pride, Power and Victory.
                 </div>
               </div>
             </div>

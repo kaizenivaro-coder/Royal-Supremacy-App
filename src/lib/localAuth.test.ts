@@ -1,8 +1,10 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  connectAccountEmail,
   createLocalAccount,
   normalizeIdentifier,
+  normalizeUsername,
   verifyLocalCredentials,
 } from "./localAuth.ts";
 
@@ -11,30 +13,55 @@ test("normalizeIdentifier trims and lowercases usernames or emails", () => {
   assert.equal(normalizeIdentifier("  RoyalKnight  "), "royalknight");
 });
 
-test("createLocalAccount lets signup use either email or username only", async () => {
-  const emailSignup = await createLocalAccount([], "Royal.Commander@example.com", "blade");
-  assert.equal(emailSignup.error, undefined);
-  assert.equal(emailSignup.user?.email, "royal.commander@example.com");
-  assert.equal(emailSignup.user?.username, "royal.commander");
+test("normalizeUsername stores one lowercase username shape", () => {
+  assert.equal(normalizeUsername("  KingChoou  "), "kingchoou");
+  assert.equal(normalizeUsername("Royal_Knight7"), "royal_knight7");
+});
 
+test("createLocalAccount signs users up with a normalized username only", async () => {
   const usernameSignup = await createLocalAccount([], "KingChoou", "dash");
   assert.equal(usernameSignup.error, undefined);
   assert.equal(usernameSignup.user?.email, undefined);
-  assert.equal(usernameSignup.user?.username, "KingChoou");
+  assert.equal(usernameSignup.user?.username, "kingchoou");
+});
+
+test("createLocalAccount rejects emails and confusing username formats on signup", async () => {
+  const emailSignup = await createLocalAccount([], "royal@example.com", "blade");
+  const spacedUsername = await createLocalAccount([], "King Choou", "blade");
+  const shortUsername = await createLocalAccount([], "kc", "blade");
+
+  assert.equal(
+    emailSignup.error,
+    "Use a username to create an account. You can add email in your profile.",
+  );
+  assert.equal(
+    spacedUsername.error,
+    "Usernames must be 3-20 characters using lowercase letters, numbers, or underscores.",
+  );
+  assert.equal(
+    shortUsername.error,
+    "Usernames must be 3-20 characters using lowercase letters, numbers, or underscores.",
+  );
 });
 
 test("verifyLocalCredentials accepts the stored email or username with the same password", async () => {
-  const signup = await createLocalAccount([], "captain@example.com", "shield");
+  const signup = await createLocalAccount([], "captain", "shield");
   assert.ok(signup.accounts);
+  const emailConnection = connectAccountEmail(
+    signup.accounts,
+    signup.user.id,
+    "captain@example.com",
+  );
+  assert.ok(emailConnection.accounts);
 
   const emailLogin = await verifyLocalCredentials(
-    signup.accounts,
+    emailConnection.accounts,
     "CAPTAIN@example.com",
     "shield",
   );
   const usernameLogin = await verifyLocalCredentials(
-    signup.accounts,
-    "captain",
+    emailConnection.accounts,
+    "CAPTAIN",
     "shield",
   );
 
@@ -43,22 +70,45 @@ test("verifyLocalCredentials accepts the stored email or username with the same 
 });
 
 test("createLocalAccount blocks duplicate email or username identifiers", async () => {
-  const signup = await createLocalAccount([], "royal@example.com", "first");
+  const signup = await createLocalAccount([], "royal", "first");
+  assert.ok(signup.accounts);
+  const withEmail = connectAccountEmail(
+    signup.accounts,
+    signup.user.id,
+    "royal@example.com",
+  );
+  assert.ok(withEmail.accounts);
+
+  const duplicateUsername = await createLocalAccount(
+    withEmail.accounts,
+    "ROYAL",
+    "second",
+  );
+  const anotherSignup = await createLocalAccount(withEmail.accounts, "valor", "second");
+  assert.ok(anotherSignup.accounts);
+  const duplicateEmail = connectAccountEmail(
+    anotherSignup.accounts,
+    anotherSignup.user.id,
+    "ROYAL@example.com",
+  );
+
+  assert.equal(duplicateEmail.error, "That email is already connected to another account.");
+  assert.equal(duplicateUsername.error, "That email or username is already in use.");
+});
+
+test("connectAccountEmail adds a valid email to the signed-in account", async () => {
+  const signup = await createLocalAccount([], "sentinel", "correct");
   assert.ok(signup.accounts);
 
-  const duplicateEmail = await createLocalAccount(
+  const connection = connectAccountEmail(
     signup.accounts,
-    "ROYAL@example.com",
-    "second",
-  );
-  const duplicateUsername = await createLocalAccount(
-    signup.accounts,
-    "royal",
-    "second",
+    signup.user.id,
+    " Sentinel@Example.COM ",
   );
 
-  assert.equal(duplicateEmail.error, "That email or username is already in use.");
-  assert.equal(duplicateUsername.error, "That email or username is already in use.");
+  assert.equal(connection.error, undefined);
+  assert.equal(connection.user?.email, "sentinel@example.com");
+  assert.equal(connection.accounts?.[0]?.email, "sentinel@example.com");
 });
 
 test("verifyLocalCredentials rejects the wrong password", async () => {

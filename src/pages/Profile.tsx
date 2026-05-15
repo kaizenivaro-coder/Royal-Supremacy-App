@@ -9,7 +9,7 @@ import {
   Label,
   Badge,
 } from "../components/ui";
-import { User, Shield, Gamepad2, Globe, Save } from "lucide-react";
+import { Mail, User, Shield, Save } from "lucide-react";
 import { Member } from "../types";
 import { cn } from "../lib/utils";
 import { HeroIcon } from "../components/HeroIcon";
@@ -18,9 +18,11 @@ import { HeroIcon } from "../components/HeroIcon";
 const CURRENT_USER_ID = "member_001";
 
 export default function Profile() {
-  const { members, setMembers } = useAppStore();
+  const { members, setMembers, authUser, connectEmail } = useAppStore();
   const [userProfile, setUserProfile] = useState<Member | undefined>(undefined);
   const [formData, setFormData] = useState<Partial<Member>>({});
+  const [accountEmail, setAccountEmail] = useState("");
+  const [emailError, setEmailError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -31,6 +33,10 @@ export default function Profile() {
       setFormData(profile);
     }
   }, [members]);
+
+  useEffect(() => {
+    setAccountEmail(authUser?.email ?? "");
+  }, [authUser?.email]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>,
@@ -69,9 +75,22 @@ export default function Profile() {
     setFormData((prev) => ({ ...prev, mainHeroes: heroesArray }));
   };
 
-  const handleSave = (e: React.FormEvent<HTMLFormElement>) => {
+  const handleSave = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsSaving(true);
+    setEmailError("");
+
+    const nextEmail = accountEmail.trim();
+    const currentEmail = authUser?.email ?? "";
+
+    if (nextEmail && nextEmail !== currentEmail) {
+      const result = await connectEmail(nextEmail);
+      if (!result.ok) {
+        setEmailError(result.error ?? "Could not connect email.");
+        setIsSaving(false);
+        return;
+      }
+    }
 
     setTimeout(() => {
       if (userProfile && formData.playerName) {
@@ -186,6 +205,43 @@ export default function Profile() {
                   Profile settings updated successfully
                 </div>
               )}
+              {emailError && (
+                <div className="p-4 rounded-lg bg-danger/10 border border-danger/30 text-danger text-xs font-black uppercase tracking-widest flex items-center justify-center">
+                  {emailError}
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+                <div className="space-y-2">
+                  <Label>Royal Account Username</Label>
+                  <div className="relative">
+                    <User className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+                    <Input
+                      value={authUser?.username ?? ""}
+                      readOnly
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      className="pl-11 font-black lowercase text-gold"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>Connected Email</Label>
+                  <div className="relative">
+                    <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+                    <Input
+                      type="email"
+                      value={accountEmail}
+                      onChange={(event) => setAccountEmail(event.target.value)}
+                      autoComplete="email"
+                      autoCapitalize="none"
+                      spellCheck={false}
+                      className="pl-11"
+                    />
+                  </div>
+                </div>
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-2 md:col-span-2">
