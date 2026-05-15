@@ -9,7 +9,7 @@ import {
   Label,
   Badge,
 } from "../components/ui";
-import { Mail, User, Shield, Save } from "lucide-react";
+import { KeyRound, Mail, User, Shield, Save } from "lucide-react";
 import { Member } from "../types";
 import { cn } from "../lib/utils";
 import { HeroIcon } from "../components/HeroIcon";
@@ -18,10 +18,12 @@ import { HeroIcon } from "../components/HeroIcon";
 const CURRENT_USER_ID = "member_001";
 
 export default function Profile() {
-  const { members, setMembers, authUser, connectEmail } = useAppStore();
+  const { members, setMembers, authUser, connectEmail, changePassword } =
+    useAppStore();
   const [userProfile, setUserProfile] = useState<Member | undefined>(undefined);
   const [formData, setFormData] = useState<Partial<Member>>({});
   const [accountEmail, setAccountEmail] = useState("");
+  const [newPassword, setNewPassword] = useState("");
   const [emailError, setEmailError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
@@ -90,6 +92,16 @@ export default function Profile() {
         setIsSaving(false);
         return;
       }
+    }
+
+    if (newPassword) {
+      const result = await changePassword(newPassword);
+      if (!result.ok) {
+        setEmailError(result.error ?? "Could not update password.");
+        setIsSaving(false);
+        return;
+      }
+      setNewPassword("");
     }
 
     setTimeout(() => {
@@ -211,7 +223,7 @@ export default function Profile() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-6 border-b border-white/5">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6 pb-6 border-b border-white/5">
                 <div className="space-y-2">
                   <Label>Royal Account Username</Label>
                   <div className="relative">
@@ -237,6 +249,20 @@ export default function Profile() {
                       autoComplete="email"
                       autoCapitalize="none"
                       spellCheck={false}
+                      className="pl-11"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>New Password</Label>
+                  <div className="relative">
+                    <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+                    <Input
+                      type="password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      autoComplete="new-password"
                       className="pl-11"
                     />
                   </div>

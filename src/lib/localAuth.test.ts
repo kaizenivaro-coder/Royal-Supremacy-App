@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  changeAccountPassword,
   connectAccountEmail,
   createLocalAccount,
   normalizeIdentifier,
@@ -109,6 +110,32 @@ test("connectAccountEmail adds a valid email to the signed-in account", async ()
   assert.equal(connection.error, undefined);
   assert.equal(connection.user?.email, "sentinel@example.com");
   assert.equal(connection.accounts?.[0]?.email, "sentinel@example.com");
+});
+
+test("changeAccountPassword updates the account password without changing the username", async () => {
+  const signup = await createLocalAccount([], "kingchoou", "oldpass");
+  assert.ok(signup.accounts);
+
+  const update = await changeAccountPassword(
+    signup.accounts,
+    signup.user.id,
+    "Toxic0303#",
+  );
+  assert.ok(update.accounts);
+
+  const oldLogin = await verifyLocalCredentials(
+    update.accounts,
+    "kingchoou",
+    "oldpass",
+  );
+  const newLogin = await verifyLocalCredentials(
+    update.accounts,
+    "KINGCHOOU",
+    "Toxic0303#",
+  );
+
+  assert.equal(oldLogin.error, "Password does not match.");
+  assert.equal(newLogin.user?.username, "kingchoou");
 });
 
 test("verifyLocalCredentials rejects the wrong password", async () => {

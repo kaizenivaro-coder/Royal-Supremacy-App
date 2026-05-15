@@ -241,3 +241,33 @@ export function connectAccountEmail(
     user: toAuthUser(updatedAccount),
   };
 }
+
+export async function changeAccountPassword(
+  accounts: LocalAuthAccount[],
+  accountId: string,
+  password: string,
+): Promise<LocalAuthResult> {
+  const validationError = validatePassword(password);
+  if (validationError) {
+    return { error: validationError };
+  }
+
+  const account = accounts.find((item) => item.id === accountId);
+  if (!account) {
+    return { error: "No signed-in account found." };
+  }
+
+  const updatedAccount = {
+    ...account,
+    passwordHash: await hashPassword(account.id, password),
+  };
+  const nextAccounts = accounts.map((item) =>
+    item.id === accountId ? updatedAccount : item,
+  );
+
+  return {
+    account: updatedAccount,
+    accounts: nextAccounts,
+    user: toAuthUser(updatedAccount),
+  };
+}

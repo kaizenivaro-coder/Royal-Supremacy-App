@@ -19,6 +19,7 @@ import {
 } from "./mock";
 import {
   AuthUser,
+  changeAccountPassword,
   connectAccountEmail,
   createLocalAccount,
   LocalAuthAccount,
@@ -54,6 +55,7 @@ interface AppContextType extends AppState {
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
   connectEmail: (email: string) => Promise<AuthActionResult>;
+  changePassword: (password: string) => Promise<AuthActionResult>;
   logout: () => void;
   resetData: () => void;
 }
@@ -206,6 +208,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { ok: true };
   };
 
+  const changePassword = async (password: string) => {
+    if (!authUser) {
+      return { ok: false, error: "No signed-in account found." };
+    }
+
+    const result = await changeAccountPassword(authAccounts, authUser.id, password);
+    if (result.error) {
+      return { ok: false, error: result.error };
+    }
+
+    persistAuthAccounts(result.accounts);
+    setAuthSession(result.user);
+    return { ok: true };
+  };
+
   const logout = () => {
     setAuthSession(null);
   };
@@ -247,6 +264,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         login,
         signup,
         connectEmail,
+        changePassword,
         logout,
         resetData,
       }}
