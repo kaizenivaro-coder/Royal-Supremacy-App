@@ -17,6 +17,11 @@ import Profile from "./pages/Profile";
 import MobilePreview from "./pages/MobilePreview";
 import PausedFeature from "./pages/PausedFeature";
 
+const routerBasename =
+  import.meta.env.BASE_URL === "/"
+    ? undefined
+    : import.meta.env.BASE_URL.replace(/\/$/, "");
+
 function RequireAuth() {
   const { authUser } = useAppStore();
   const location = useLocation();
@@ -41,7 +46,7 @@ function AuthRoute() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter>
+      <BrowserRouter basename={routerBasename}>
         <Routes>
           <Route path="/auth" element={<AuthRoute />} />
           <Route path="/mobile-preview" element={<MobilePreview />} />

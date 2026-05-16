@@ -1,8 +1,8 @@
 # Royal Supremacy App
 
 Royal Supremacy is a Vite + React command center for managing an MLBB squad:
-members, teams, schedules, battle reports, Royal Points, leaderboards,
-announcements, tryouts, and local admin workflows.
+members, fixed MVP teams, announcements, tryouts, profiles, and local admin
+workflows.
 
 ## Run Locally
 
@@ -23,20 +23,31 @@ npm run lint
 npm run build
 ```
 
-## Current Data Layer
+## Supabase
 
-The app currently stores data in browser `localStorage` through
-`src/data/store.tsx`. Supabase is not wired yet: there is no
-`@supabase/supabase-js` dependency and no `VITE_SUPABASE_*` environment
-configuration.
+The app is wired to Supabase through `@supabase/supabase-js`. The current MVP
+uses one shared table, `public.mvp_app_state`, as a synced JSON state store while
+the product shape is still changing quickly. Browser `localStorage` remains as a
+fallback cache.
 
-Planned Supabase work:
+Required public Vite variables:
 
-- Add Supabase client configuration through public Vite environment variables.
-- Design tables for members, teams, schedules, matches, points, announcements,
-  and tryouts.
-- Add Row Level Security policies before exposing write access.
-- Replace local-only mutations with Supabase-backed reads and writes.
+```bash
+VITE_SUPABASE_URL="https://sjzmuegqldknoxddvzda.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="your_publishable_key"
+```
+
+The current RLS policies are permissive for the private friend-demo MVP. Tighten
+them before sharing the app broadly.
+
+## Public Link
+
+GitHub Pages deployment is configured in `.github/workflows/deploy-pages.yml`.
+After the workflow runs, the share link is:
+
+```text
+https://kaizenivaro-coder.github.io/Royal-Supremacy-App/
+```
 
 ## Hero Icons
 

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { publicAsset } from "../lib/publicAssets";
 import { cn } from "../lib/utils";
 
 interface HeroIconProps {
@@ -15,7 +16,7 @@ export function HeroIcon({ heroName, className }: HeroIconProps) {
   }, [formattedName]);
 
   // Assuming icons could be uploaded by the user to public/heroes/
-  const imgUrl = `/heroes/${formattedName}.png`;
+  const imgUrl = publicAsset(`heroes/${formattedName}.png`);
 
   if (error) {
     return (

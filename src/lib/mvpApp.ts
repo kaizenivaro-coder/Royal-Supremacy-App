@@ -1,4 +1,5 @@
 import type { Announcement, Member, Notification, ProfileBanner } from "../types";
+import { publicAsset } from "./publicAssets";
 
 export const ADMIN_PORTAL_PASSWORD = "Toxic0303#";
 export const MVP_STORAGE_VERSION = "royal-supremacy-mvp-2026-05-16";
@@ -15,10 +16,10 @@ export const TEAM_GROUPS = [
 export type TeamGroupName = (typeof TEAM_GROUPS)[number];
 
 export const PROFILE_BANNERS: ProfileBanner[] = [
-  { id: "chou-stun", name: "Chou STUN", src: "/banners/chou-stun.jpg" },
-  { id: "tigreal-lightborn", name: "Tigreal Lightborn", src: "/banners/tigreal-lightborn.webp" },
-  { id: "tigreal-golden-baron", name: "Tigreal Golden Baron", src: "/banners/tigreal-golden-baron.webp" },
-  { id: "tigreal-warrior-dawn", name: "Tigreal Warrior of Dawn", src: "/banners/tigreal-warrior-dawn.webp" },
+  { id: "chou-stun", name: "Chou STUN", src: publicAsset("banners/chou-stun.jpg") },
+  { id: "tigreal-lightborn", name: "Tigreal Lightborn", src: publicAsset("banners/tigreal-lightborn.webp") },
+  { id: "tigreal-golden-baron", name: "Tigreal Golden Baron", src: publicAsset("banners/tigreal-golden-baron.webp") },
+  { id: "tigreal-warrior-dawn", name: "Tigreal Warrior of Dawn", src: publicAsset("banners/tigreal-warrior-dawn.webp") },
 ];
 
 function isTeamGroup(team: string): team is TeamGroupName {

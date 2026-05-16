@@ -12,6 +12,7 @@ import {
 import { Button, Input, Label } from "../components/ui";
 import { useAppStore } from "../data/store";
 import { normalizeUsername } from "../lib/localAuth";
+import { publicAsset } from "../lib/publicAssets";
 import { cn } from "../lib/utils";
 
 type AuthMode = "login" | "signup";
@@ -23,7 +24,7 @@ interface AuthLocationState {
   };
 }
 
-const splashImage = "/auth/royal-login-splash.jpg";
+const splashImage = publicAsset("auth/royal-login-splash.jpg");
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("login");

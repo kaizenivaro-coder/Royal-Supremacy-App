@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState } from "react";
+import React, { createContext, useContext, useEffect, useRef, useState } from "react";
 import type { Announcement, Member, Notification, Tryout } from "../types";
 import { mockAnnouncements, mockMembers, mockTryouts } from "./mock";
 import {
@@ -15,6 +15,12 @@ import {
   assignMemberTeam as assignMemberTeamData,
   createOnlineNotification,
 } from "../lib/mvpApp";
+import {
+  RemoteAppState,
+  loadRemoteAppState,
+  saveRemoteAppState,
+} from "../lib/supabaseAppState";
+import { isSupabaseConfigured } from "../lib/supabaseClient";
 
 interface AppState {
   members: Member[];
@@ -93,6 +99,14 @@ function writeStorage<T>(key: string, value: T) {
   localStorage.setItem(storageKey(key), JSON.stringify(value));
 }
 
+function writeAppStateSnapshot(state: RemoteAppState) {
+  writeStorage("members", state.members);
+  writeStorage("announcements", state.announcements);
+  writeStorage("tryouts", state.tryouts);
+  writeStorage("notifications", state.notifications);
+  writeStorage("squadLogoSrc", state.squadLogoSrc);
+}
+
 function createMemberForAuthUser(user: AuthUser): Member {
   return {
     ...mockMembers[0],
@@ -132,6 +146,7 @@ function runMvpMigration() {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   runMvpMigration();
+  const saveTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   const [authAccounts, setAuthAccountsState] = useState<LocalAuthAccount[]>(
     readStorage("auth_accounts", []),
@@ -157,6 +172,68 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isAdmin, setIsAdminState] = useState<boolean>(
     readStorage("isAdmin", defaultState.isAdmin),
   );
+  const [isRemoteHydrated, setIsRemoteHydrated] = useState(!isSupabaseConfigured);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function hydrateRemoteState() {
+      const remoteState = await loadRemoteAppState();
+      if (ignore) return;
+
+      if (remoteState) {
+        setMembersState(remoteState.members);
+        setAnnouncementsState(remoteState.announcements);
+        setTryoutsState(remoteState.tryouts);
+        setNotificationsState(remoteState.notifications);
+        setSquadLogoSrcState(remoteState.squadLogoSrc);
+        writeAppStateSnapshot(remoteState);
+      }
+
+      setIsRemoteHydrated(true);
+    }
+
+    if (isSupabaseConfigured) {
+      void hydrateRemoteState();
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isRemoteHydrated || !isSupabaseConfigured) {
+      return undefined;
+    }
+
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current);
+    }
+
+    saveTimerRef.current = window.setTimeout(() => {
+      void saveRemoteAppState({
+        members,
+        announcements,
+        tryouts,
+        notifications,
+        squadLogoSrc,
+      });
+    }, 700);
+
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current);
+      }
+    };
+  }, [
+    announcements,
+    isRemoteHydrated,
+    members,
+    notifications,
+    squadLogoSrc,
+    tryouts,
+  ]);
 
   const setMembers = (nextMembers: Member[]) => {
     setMembersState(nextMembers);

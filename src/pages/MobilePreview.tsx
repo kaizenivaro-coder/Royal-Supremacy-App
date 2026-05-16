@@ -1,4 +1,6 @@
 export default function MobilePreview() {
+  const appRoot = import.meta.env.BASE_URL || "/";
+
   return (
     <div className="min-h-screen bg-background text-text-white">
       <main className="grid min-h-screen place-items-center px-4 py-6">
@@ -13,7 +15,7 @@ export default function MobilePreview() {
           </div>
           <div className="h-[844px] w-[390px] max-h-[calc(100vh-120px)] max-w-[calc(100vw-24px)] overflow-hidden rounded-[38px] border-[10px] border-[#0b1324] bg-background shadow-[0_28px_90px_rgba(0,0,0,0.55),0_0_0_1px_rgba(242,196,83,0.28)]">
             <iframe
-              src="/"
+              src={appRoot}
               title="Royal Supremacy phone preview"
               className="h-full w-full border-0"
             />
