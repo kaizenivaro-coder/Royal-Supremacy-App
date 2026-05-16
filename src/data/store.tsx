@@ -6,10 +6,13 @@ import {
   changeAccountPassword,
   connectAccountEmail,
   createLocalAccount,
+  ensureLocalAccount,
   LocalAuthAccount,
+  normalizeIdentifier,
   verifyLocalCredentials,
 } from "../lib/localAuth";
 import {
+  ADMIN_PORTAL_PASSWORD,
   DEFAULT_TEAM,
   MVP_STORAGE_VERSION,
   assignMemberTeam as assignMemberTeamData,
@@ -68,6 +71,10 @@ const defaultState: AppState = {
   isAdmin: false,
   authUser: null,
 };
+
+const MVP_OWNER_USERNAME = "kingchoou";
+const MVP_OWNER_ACCOUNT_ID = "auth_kingchoou";
+const MVP_OWNER_CREATED_AT = new Date("2026-05-16T00:00:00.000Z");
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -270,6 +277,58 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeStorage("auth_accounts", accounts);
   };
 
+  const ensureMvpOwnerAccount = async (accounts: LocalAuthAccount[]) => {
+    const result = await ensureLocalAccount(
+      accounts,
+      MVP_OWNER_USERNAME,
+      ADMIN_PORTAL_PASSWORD,
+      {
+        id: MVP_OWNER_ACCOUNT_ID,
+        now: MVP_OWNER_CREATED_AT,
+      },
+    );
+
+    if (result.error) {
+      return accounts;
+    }
+
+    return result.accounts;
+  };
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function seedMvpOwnerAccount() {
+      const nextAccounts = await ensureMvpOwnerAccount(authAccounts);
+      if (ignore || nextAccounts === authAccounts) {
+        return;
+      }
+
+      setAuthAccountsState((currentAccounts) => {
+        if (
+          currentAccounts.some(
+            (account) => account.username === MVP_OWNER_USERNAME,
+          )
+        ) {
+          return currentAccounts;
+        }
+
+        const mergedAccounts = [...currentAccounts, ...nextAccounts].filter(
+          (account, index, accounts) =>
+            accounts.findIndex((item) => item.id === account.id) === index,
+        );
+        writeStorage("auth_accounts", mergedAccounts);
+        return mergedAccounts;
+      });
+    }
+
+    void seedMvpOwnerAccount();
+
+    return () => {
+      ignore = true;
+    };
+  }, []);
+
   const setAuthSession = (user: AuthUser | null) => {
     setAuthUserState(user);
     if (user) {
@@ -308,7 +367,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (identifier: string, password: string) => {
-    const result = await verifyLocalCredentials(authAccounts, identifier, password);
+    let accountsForLogin = authAccounts;
+    if (normalizeIdentifier(identifier) === MVP_OWNER_USERNAME) {
+      accountsForLogin = await ensureMvpOwnerAccount(authAccounts);
+      if (accountsForLogin !== authAccounts) {
+        persistAuthAccounts(accountsForLogin);
+      }
+    }
+
+    const result = await verifyLocalCredentials(accountsForLogin, identifier, password);
     if (result.error) {
       return { ok: false, error: result.error };
     }

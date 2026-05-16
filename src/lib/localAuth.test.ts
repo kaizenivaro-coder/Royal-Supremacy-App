@@ -4,6 +4,7 @@ import {
   changeAccountPassword,
   connectAccountEmail,
   createLocalAccount,
+  ensureLocalAccount,
   normalizeIdentifier,
   normalizeUsername,
   verifyLocalCredentials,
@@ -136,6 +137,49 @@ test("changeAccountPassword updates the account password without changing the us
 
   assert.equal(oldLogin.error, "Password does not match.");
   assert.equal(newLogin.user?.username, "kingchoou");
+});
+
+test("ensureLocalAccount seeds the MVP owner account for new browser origins", async () => {
+  const seeded = await ensureLocalAccount([], "kingchoou", "Toxic0303#", {
+    id: "auth_kingchoou",
+    now: new Date("2026-05-16T00:00:00.000Z"),
+  });
+  assert.equal(seeded.error, undefined);
+  assert.equal(seeded.didCreate, true);
+  assert.equal(seeded.account?.id, "auth_kingchoou");
+
+  const login = await verifyLocalCredentials(
+    seeded.accounts,
+    "KINGCHOOU",
+    "Toxic0303#",
+  );
+
+  assert.equal(login.user?.username, "kingchoou");
+});
+
+test("ensureLocalAccount keeps an existing account instead of replacing it", async () => {
+  const signup = await createLocalAccount([], "kingchoou", "custompass", {
+    id: "custom_kingchoou",
+  });
+  assert.ok(signup.accounts);
+
+  const seeded = await ensureLocalAccount(
+    signup.accounts,
+    "kingchoou",
+    "Toxic0303#",
+    { id: "auth_kingchoou" },
+  );
+  assert.equal(seeded.error, undefined);
+  assert.equal(seeded.didCreate, false);
+  assert.equal(seeded.accounts?.[0]?.id, "custom_kingchoou");
+
+  const login = await verifyLocalCredentials(
+    seeded.accounts,
+    "kingchoou",
+    "custompass",
+  );
+
+  assert.equal(login.user?.id, "custom_kingchoou");
 });
 
 test("verifyLocalCredentials rejects the wrong password", async () => {

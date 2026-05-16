@@ -28,10 +28,20 @@ interface AuthFailure {
 
 export type LocalAuthResult = AuthSuccess | AuthFailure;
 
-interface CreateAccountOptions {
+export interface CreateAccountOptions {
   id?: string;
   now?: Date;
 }
+
+interface EnsureAuthSuccess extends AuthSuccess {
+  didCreate: boolean;
+}
+
+interface EnsureAuthFailure extends AuthFailure {
+  didCreate?: undefined;
+}
+
+export type EnsureLocalAuthResult = EnsureAuthSuccess | EnsureAuthFailure;
 
 export function normalizeIdentifier(identifier: string) {
   return identifier.trim().toLowerCase();
@@ -173,6 +183,35 @@ export async function createLocalAccount(
     account,
     accounts: nextAccounts,
     user: toAuthUser(account),
+  };
+}
+
+export async function ensureLocalAccount(
+  accounts: LocalAuthAccount[],
+  identifier: string,
+  password: string,
+  options: CreateAccountOptions = {},
+): Promise<EnsureLocalAuthResult> {
+  const existingAccount = findAccountByIdentifier(accounts, identifier);
+  if (existingAccount) {
+    return {
+      account: existingAccount,
+      accounts,
+      user: toAuthUser(existingAccount),
+      didCreate: false,
+    };
+  }
+
+  const result = await createLocalAccount(accounts, identifier, password, options);
+  if (result.error) {
+    return { error: result.error };
+  }
+
+  return {
+    account: result.account,
+    accounts: result.accounts,
+    user: result.user,
+    didCreate: true,
   };
 }
 
