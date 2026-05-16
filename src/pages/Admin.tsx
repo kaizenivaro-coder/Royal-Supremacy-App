@@ -3,11 +3,13 @@ import { useSearchParams } from "react-router-dom";
 import {
   Bell,
   Database,
+  Image,
   LockKeyhole,
   LogOut,
   Send,
   ShieldAlert,
   Trash2,
+  Upload,
   UserPlus,
 } from "lucide-react";
 import { useAppStore } from "../data/store";
@@ -24,6 +26,8 @@ import type { Announcement, Member } from "../types";
 import { getAdminTabFromSearch } from "../lib/appInsights";
 import { TEAM_GROUPS, validateAdminPortalPassword } from "../lib/mvpApp";
 import { normalizeUsername } from "../lib/localAuth";
+import { validateLocalImageUpload } from "../lib/imageUploads";
+import { SquadLogoPlaceholder } from "../components/SquadLogoPlaceholder";
 
 const tabs = [
   { id: "general", icon: Database, label: "Systems" },
@@ -40,6 +44,8 @@ export default function Admin() {
     assignMemberTeam,
     announcements,
     setAnnouncements,
+    squadLogoSrc,
+    setSquadLogoSrc,
     resetData,
   } = useAppStore();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -50,6 +56,7 @@ export default function Admin() {
   const [accessError, setAccessError] = useState("");
   const [memberError, setMemberError] = useState("");
   const [assignmentMessage, setAssignmentMessage] = useState("");
+  const [logoError, setLogoError] = useState("");
 
   useEffect(() => {
     setActiveTab(getAdminTabFromSearch(`?${searchParams.toString()}`));
@@ -136,6 +143,27 @@ export default function Admin() {
     form.reset();
   };
 
+  const handleSquadLogoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateLocalImageUpload(file);
+    if (validationError) {
+      setLogoError(validationError);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") {
+        setSquadLogoSrc(reader.result);
+        setLogoError("");
+      }
+    });
+    reader.readAsDataURL(file);
+  };
+
   if (!isAdmin) {
     return (
       <Card className="mx-auto mt-16 max-w-md p-8 text-center">
@@ -211,6 +239,55 @@ export default function Admin() {
 
       {activeTab === "general" && (
         <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="p-6">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-center">
+              <SquadLogoPlaceholder src={squadLogoSrc} className="h-20 w-20 shrink-0" />
+              <div className="min-w-0 flex-1">
+                <h2 className="flex items-center gap-2 font-display text-xl font-black uppercase text-white">
+                  <Image size={20} className="text-gold" />
+                  Squad Logo
+                </h2>
+                <p className="mt-2 text-sm font-semibold leading-6 text-text-muted">
+                  Upload the Royal Supremacy squad mark used in the sidebar and mobile header.
+                </p>
+                {logoError && (
+                  <div className="mt-3 rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs font-black uppercase tracking-widest text-danger">
+                    {logoError}
+                  </div>
+                )}
+                <div className="mt-5 flex flex-wrap gap-3">
+                  <label
+                    htmlFor="squad-logo-upload"
+                    className="inline-flex h-11 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gold/40 bg-gold px-5 text-sm font-black uppercase tracking-wider text-background shadow-lg shadow-gold/25 transition hover:bg-white"
+                    style={{
+                      clipPath:
+                        "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))",
+                    }}
+                  >
+                    <Upload size={16} />
+                    Upload Logo
+                  </label>
+                  <input
+                    id="squad-logo-upload"
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/gif"
+                    className="sr-only"
+                    onChange={handleSquadLogoUpload}
+                  />
+                  {squadLogoSrc && (
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      onClick={() => setSquadLogoSrc("")}
+                    >
+                      Clear Logo
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </Card>
+
           <Card className="p-6">
             <h2 className="font-display text-xl font-black uppercase text-white">
               MVP Data Core

@@ -46,8 +46,16 @@ export default function Teams() {
                       onClick={() => setSelectedMember(member)}
                       className="flex w-full items-center gap-3 rounded-lg border border-blue-200/10 bg-background/45 p-3 text-left transition hover:border-gold/30 hover:bg-surface-hover"
                     >
-                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-blue-200/10 bg-surface text-xs font-black uppercase text-gold">
-                        {member.username.slice(0, 1)}
+                      <div className="grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-lg border border-blue-200/10 bg-surface text-xs font-black uppercase text-gold">
+                        {member.profileImageSrc ? (
+                          <img
+                            src={member.profileImageSrc}
+                            alt="Profile"
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          member.username.slice(0, 1)
+                        )}
                       </div>
                       <div className="min-w-0">
                         <p className="truncate text-sm font-black text-white">
@@ -78,8 +86,16 @@ export default function Teams() {
           <div className="w-full max-w-md rounded-lg border border-gold/20 bg-surface p-6 shadow-2xl">
             <div className="mb-5 flex items-start justify-between gap-4">
               <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-lg border border-gold/30 bg-gold/10 text-gold">
-                  <UserCircle size={24} />
+                <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-lg border border-gold/30 bg-gold/10 text-gold">
+                  {selectedMember.profileImageSrc ? (
+                    <img
+                      src={selectedMember.profileImageSrc}
+                      alt="Profile"
+                      className="h-full w-full object-cover"
+                    />
+                  ) : (
+                    <UserCircle size={24} />
+                  )}
                 </div>
                 <div>
                   <h3 className="text-xl font-black uppercase text-white">

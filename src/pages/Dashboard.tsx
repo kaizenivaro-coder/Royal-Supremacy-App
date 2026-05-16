@@ -99,8 +99,16 @@ export default function Dashboard() {
                   {currentMember?.playerName ?? "King Choou"}
                 </h2>
               </div>
-              <div className="grid h-12 w-12 place-items-center rounded-lg border border-gold/30 bg-gold/10 text-lg font-black text-gold">
-                {(currentMember?.username ?? "k").slice(0, 1).toUpperCase()}
+              <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-lg border border-gold/30 bg-gold/10 text-lg font-black text-gold">
+                {currentMember?.profileImageSrc ? (
+                  <img
+                    src={currentMember.profileImageSrc}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  (currentMember?.username ?? "k").slice(0, 1).toUpperCase()
+                )}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">

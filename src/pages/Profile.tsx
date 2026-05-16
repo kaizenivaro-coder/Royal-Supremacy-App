@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from "react";
-import { Image, KeyRound, Mail, Save, User } from "lucide-react";
+import { Camera, Image, KeyRound, Mail, Save, Upload, User } from "lucide-react";
 import { useAppStore } from "../data/store";
 import {
   Badge,
@@ -13,6 +13,7 @@ import {
 import type { Member } from "../types";
 import { PROFILE_BANNERS, getProfileBanner } from "../lib/mvpApp";
 import { HeroIcon } from "../components/HeroIcon";
+import { validateLocalImageUpload } from "../lib/imageUploads";
 
 export default function Profile() {
   const { members, setMembers, authUser, connectEmail, changePassword } =
@@ -23,6 +24,7 @@ export default function Profile() {
   const [accountEmail, setAccountEmail] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [accountError, setAccountError] = useState("");
+  const [imageError, setImageError] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
 
@@ -49,6 +51,27 @@ export default function Profile() {
       .map((hero) => hero.trim())
       .filter(Boolean);
     setFormData((previous) => ({ ...previous, mainHeroes: heroesArray }));
+  };
+
+  const handleProfileImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+
+    const validationError = validateLocalImageUpload(file);
+    if (validationError) {
+      setImageError(validationError);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.addEventListener("load", () => {
+      if (typeof reader.result === "string") {
+        setFormData((previous) => ({ ...previous, profileImageSrc: reader.result as string }));
+        setImageError("");
+      }
+    });
+    reader.readAsDataURL(file);
   };
 
   const handleSave = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -117,8 +140,16 @@ export default function Profile() {
               }}
             />
             <div className="p-6 text-center">
-              <div className="mx-auto -mt-14 grid h-24 w-24 place-items-center rounded-lg border border-gold/30 bg-background text-4xl font-black text-white shadow-2xl">
-                {formData.playerName?.substring(0, 1).toUpperCase() || "?"}
+              <div className="mx-auto -mt-14 grid h-24 w-24 place-items-center overflow-hidden rounded-lg border border-gold/30 bg-background text-4xl font-black text-white shadow-2xl">
+                {formData.profileImageSrc ? (
+                  <img
+                    src={formData.profileImageSrc}
+                    alt="Profile"
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  formData.playerName?.substring(0, 1).toUpperCase() || "?"
+                )}
               </div>
               <h2 className="mt-5 text-2xl font-black uppercase text-white">
                 {formData.playerName}
@@ -129,6 +160,38 @@ export default function Profile() {
               <div className="mt-5 flex flex-wrap justify-center gap-2">
                 <Badge variant="purple">{formData.team}</Badge>
                 <Badge variant="success">{formData.status}</Badge>
+              </div>
+              <div className="mt-5">
+                <label
+                  htmlFor="profile-image-upload"
+                  className="mx-auto inline-flex h-10 cursor-pointer items-center justify-center gap-2 rounded-lg border border-gold/40 bg-gold/10 px-4 text-[10px] font-black uppercase tracking-widest text-gold transition hover:bg-gold hover:text-background"
+                >
+                  <Upload size={14} />
+                  Upload Profile Picture
+                </label>
+                <input
+                  id="profile-image-upload"
+                  type="file"
+                  accept="image/png,image/jpeg,image/webp,image/gif"
+                  className="sr-only"
+                  onChange={handleProfileImageUpload}
+                />
+                {formData.profileImageSrc && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setFormData((previous) => ({ ...previous, profileImageSrc: undefined }))
+                    }
+                    className="mt-3 block w-full text-[10px] font-black uppercase tracking-widest text-text-muted transition hover:text-white"
+                  >
+                    Remove profile picture
+                  </button>
+                )}
+                {imageError && (
+                  <div className="mt-3 rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs font-black uppercase tracking-widest text-danger">
+                    {imageError}
+                  </div>
+                )}
               </div>
               <div className="mt-6 grid grid-cols-2 gap-3 border-t border-white/5 pt-6">
                 <div>
@@ -185,7 +248,7 @@ export default function Profile() {
         <div className="lg:col-span-2">
           <Card className="p-6 md:p-8">
             <h3 className="mb-6 flex items-center gap-2 font-display text-xl font-black uppercase tracking-widest text-gold">
-              <User className="h-5 w-5" />
+              <Camera className="h-5 w-5" />
               Identity Configuration
             </h3>
 

@@ -13,6 +13,7 @@ export interface Member {
   team: string;
   status: string; // Active, Inactive, Trial, Suspended, Left
   bannerId: string;
+  profileImageSrc?: string;
 }
 
 export interface Notification {

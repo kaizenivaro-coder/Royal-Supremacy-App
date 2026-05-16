@@ -21,6 +21,7 @@ interface AppState {
   announcements: Announcement[];
   tryouts: Tryout[];
   notifications: Notification[];
+  squadLogoSrc: string;
   isAdmin: boolean;
   authUser: AuthUser | null;
 }
@@ -40,6 +41,7 @@ interface AppContextType extends AppState {
   setAnnouncements: (announcements: Announcement[]) => void;
   setTryouts: (tryouts: Tryout[]) => void;
   setNotifications: (notifications: Notification[]) => void;
+  setSquadLogoSrc: (src: string) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
@@ -56,6 +58,7 @@ const defaultState: AppState = {
   announcements: mockAnnouncements,
   tryouts: mockTryouts,
   notifications: [],
+  squadLogoSrc: "",
   isAdmin: false,
   authUser: null,
 };
@@ -67,6 +70,7 @@ const activeDataKeys = [
   "announcements",
   "tryouts",
   "notifications",
+  "squadLogoSrc",
   "isAdmin",
 ];
 
@@ -147,6 +151,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notifications, setNotificationsState] = useState<Notification[]>(
     readStorage("notifications", defaultState.notifications),
   );
+  const [squadLogoSrc, setSquadLogoSrcState] = useState<string>(
+    readStorage("squadLogoSrc", defaultState.squadLogoSrc),
+  );
   const [isAdmin, setIsAdminState] = useState<boolean>(
     readStorage("isAdmin", defaultState.isAdmin),
   );
@@ -169,6 +176,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setNotifications = (nextNotifications: Notification[]) => {
     setNotificationsState(nextNotifications);
     writeStorage("notifications", nextNotifications);
+  };
+
+  const setSquadLogoSrc = (src: string) => {
+    setSquadLogoSrcState(src);
+    writeStorage("squadLogoSrc", src);
   };
 
   const setIsAdmin = (nextIsAdmin: boolean) => {
@@ -289,11 +301,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setAnnouncementsState(defaultState.announcements);
     setTryoutsState(defaultState.tryouts);
     setNotificationsState(defaultState.notifications);
+    setSquadLogoSrcState(defaultState.squadLogoSrc);
     setIsAdminState(defaultState.isAdmin);
     writeStorage("members", nextMembers);
     writeStorage("announcements", defaultState.announcements);
     writeStorage("tryouts", defaultState.tryouts);
     writeStorage("notifications", defaultState.notifications);
+    writeStorage("squadLogoSrc", defaultState.squadLogoSrc);
   };
 
   return (
@@ -303,12 +317,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         announcements,
         tryouts,
         notifications,
+        squadLogoSrc,
         isAdmin,
         authUser,
         setMembers,
         setAnnouncements,
         setTryouts,
         setNotifications,
+        setSquadLogoSrc,
         setIsAdmin,
         login,
         signup,

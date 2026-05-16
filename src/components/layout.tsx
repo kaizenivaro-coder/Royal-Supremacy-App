@@ -29,7 +29,7 @@ const navItems = [
 export default function RootLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
-  const { members, authUser, logout, notifications } = useAppStore();
+  const { members, authUser, logout, notifications, squadLogoSrc } = useAppStore();
   const activePage = navItems.find((item) => item.path === location.pathname);
   const activeMembers = members.filter((member) => member.status === "Active").length;
   const commanderName = authUser?.username ?? "Commander";
@@ -41,7 +41,7 @@ export default function RootLayout() {
     <div className="flex min-h-screen bg-background text-text-white">
       <div className="fixed left-0 right-0 top-0 z-50 flex h-16 items-center justify-between border-b border-gold/15 bg-surface/95 px-4 backdrop-blur-md lg:hidden">
         <div className="flex items-center gap-2 text-gold">
-          <SquadLogoPlaceholder className="h-8 w-8" />
+          <SquadLogoPlaceholder src={squadLogoSrc} className="h-8 w-8" />
           <span className="font-display text-base font-black uppercase tracking-wider text-white mlbb-title">
             Royal Supremacy
           </span>
@@ -69,7 +69,7 @@ export default function RootLayout() {
         )}
       >
         <div className="hidden items-center gap-3 border-b border-blue-200/10 p-6 text-gold lg:flex">
-          <SquadLogoPlaceholder className="h-9 w-9 shrink-0" />
+          <SquadLogoPlaceholder src={squadLogoSrc} className="h-9 w-9 shrink-0" />
           <div className="flex flex-col uppercase">
             <span className="font-display text-lg font-black leading-tight tracking-[0.18em] text-gold mlbb-title">
               Royal
