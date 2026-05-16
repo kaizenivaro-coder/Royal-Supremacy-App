@@ -19,6 +19,7 @@ import Announcements from "./pages/Announcements";
 import Tryouts from "./pages/Tryouts";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import MobilePreview from "./pages/MobilePreview";
 
 function RequireAuth() {
   const { authUser } = useAppStore();
@@ -47,6 +48,7 @@ export default function App() {
       <BrowserRouter>
         <Routes>
           <Route path="/auth" element={<AuthRoute />} />
+          <Route path="/mobile-preview" element={<MobilePreview />} />
           <Route path="/" element={<RequireAuth />}>
             <Route index element={<Dashboard />} />
             <Route path="members" element={<Members />} />
