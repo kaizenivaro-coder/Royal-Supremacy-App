@@ -1,5 +1,7 @@
 export interface Member {
   id: string;
+  username: string;
+  authUserId?: string;
   playerName: string;
   mlbbId: string;
   serverId: string;
@@ -8,52 +10,24 @@ export interface Member {
   mainHeroes: string[];
   currentRank: string;
   highestRank: string;
-  team: string; // Team Sovereign, Royal Valor, Academy, Unassigned
+  team: string;
   status: string; // Active, Inactive, Trial, Suspended, Left
-  royalPoints: number;
-  attendanceRate: number;
+  bannerId: string;
 }
 
-export interface Team {
+export interface Notification {
+  id: string;
+  type: string;
+  message: string;
+  createdAt: string;
+  actorUsername: string;
+  read?: boolean;
+}
+
+export interface ProfileBanner {
   id: string;
   name: string;
-  type: string;
-  captain: string;
-  members: string[]; // member ids
-  notes: string;
-}
-
-export interface ScheduleEvent {
-  id: string;
-  title: string;
-  type: string; // Practice, Ranked Push, Scrim, Tournament, Team Meeting, VOD Review
-  date: string;
-  time: string;
-  team: string;
-  description: string;
-  attendance: Record<string, string>; // memberId -> 'Attending' | 'Maybe' | 'Not Attending'
-}
-
-export interface Match {
-  id: string;
-  date: string;
-  matchType: string;
-  team: string;
-  enemyTeam: string;
-  result: string; // Win, Loss, Draw / Cancelled
-  mvp: string; // memberId or playerName
-  bestPerformer: string;
-  mainMistake: string;
-  notes: string;
-}
-
-export interface PointTransaction {
-  id: string;
-  memberId: string;
-  change: number; // e.g., 10 or -10
-  reason: string;
-  addedBy: string;
-  date: string;
+  src: string;
 }
 
 export interface Announcement {

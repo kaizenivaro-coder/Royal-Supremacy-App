@@ -134,7 +134,7 @@ export default function Announcements() {
                     )} size={48} />
                   </div>
 
-                  <div className="bg-white/5 border border-white/5 rounded-2xl p-6 mb-2">
+                  <div className="bg-white/5 border border-white/5 rounded-lg p-6 mb-2">
                     <p className="text-[17px] text-white/90 leading-relaxed font-normal whitespace-pre-wrap">
                        {ann.message}
                     </p>
@@ -144,7 +144,7 @@ export default function Announcements() {
             </Card>
           ))
         ) : (
-          <div className="text-center py-24 bg-white/5 border border-dashed border-white/10 rounded-3xl flex flex-col items-center">
+          <div className="text-center py-24 bg-white/5 border border-dashed border-white/10 rounded-lg flex flex-col items-center">
             <Megaphone size={64} className="mb-6 text-text-muted opacity-20" strokeWidth={1} />
             <h3 className="text-2xl font-black uppercase text-white mb-2 tracking-widest">Total Radio Silence</h3>
             <p className="text-text-muted max-w-xs font-medium">Standby for incoming communications from the high command.</p>

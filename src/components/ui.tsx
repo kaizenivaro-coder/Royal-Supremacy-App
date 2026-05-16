@@ -12,7 +12,7 @@ export function Card({
       className={cn(
         glass
           ? "glass-card"
-          : "bg-surface border border-blue-200/10 p-6 shadow-xl",
+          : "rounded-lg bg-surface border border-blue-200/10 p-6 shadow-xl",
         className,
       )}
       {...props}
@@ -33,10 +33,10 @@ export function Button({
   size?: "sm" | "default" | "lg" | "icon";
 }) {
   const base =
-    "inline-flex items-center justify-center font-black transition-all focus:outline-none focus:ring-2 focus:ring-gold/60 active:scale-95 disabled:opacity-50 disabled:pointer-events-none uppercase tracking-wider";
+    "inline-flex items-center justify-center rounded-lg font-black transition-all focus:outline-none focus:ring-2 focus:ring-gold/60 active:scale-95 disabled:opacity-50 disabled:pointer-events-none uppercase tracking-wider";
   const variants = {
     primary:
-      "bg-gradient-to-r from-purple-royal to-[#1e8bf5] hover:from-[#2d67f1] hover:to-purple-light text-white shadow-lg shadow-purple-royal/30 border border-blue-200/20",
+      "bg-surface-hover hover:bg-[#203965] text-white shadow-lg shadow-black/20 border border-blue-200/15",
     secondary:
       "bg-surface-hover hover:bg-[#203965] text-white border border-blue-200/15",
     gold: "bg-gradient-to-r from-gold-muted to-gold hover:from-gold hover:to-white text-background shadow-lg shadow-gold/25 border border-gold/40",
@@ -56,9 +56,9 @@ export function Button({
       className={cn(base, variants[variant], sizes[size], className)}
       style={{
         clipPath:
-          size === "icon"
-            ? undefined
-            : "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))",
+          variant === "gold" && size !== "icon"
+            ? "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))"
+            : undefined,
       }}
       {...props}
     >
@@ -77,8 +77,7 @@ export function Badge({
   const variants = {
     default: "bg-white/5 text-text-muted border border-blue-200/10",
     gold: "bg-gold/10 text-gold border border-gold/35 shadow-[0_0_10px_rgba(242,196,83,0.14)]",
-    purple:
-      "bg-purple-royal/20 text-purple-light border border-purple-royal/35",
+    purple: "bg-blue-400/10 text-purple-light border border-blue-300/25",
     success: "bg-success/10 text-success border border-success/30",
     danger: "bg-danger/10 text-danger border border-danger/30",
     warning: "bg-orange-500/10 text-orange-400 border border-orange-500/30",
@@ -104,7 +103,7 @@ export function Input({
   return (
     <input
       className={cn(
-        "flex h-11 w-full border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        "flex h-11 w-full rounded-lg border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
         className,
       )}
       {...props}
@@ -119,7 +118,7 @@ export function Textarea({
   return (
     <textarea
       className={cn(
-        "flex min-h-[80px] w-full border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        "flex min-h-[80px] w-full rounded-lg border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white placeholder:text-text-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
         className,
       )}
       {...props}
@@ -135,7 +134,7 @@ export function Select({
   return (
     <select
       className={cn(
-        "flex h-11 w-full appearance-none border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
+        "flex h-11 w-full appearance-none rounded-lg border border-blue-200/15 bg-surface-hover/55 px-4 py-2 text-sm text-white focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-gold/50 disabled:cursor-not-allowed disabled:opacity-50 transition-all",
         className,
       )}
       {...props}

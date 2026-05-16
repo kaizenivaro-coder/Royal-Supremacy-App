@@ -1,10 +1,35 @@
 import React, { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
+import {
+  Bell,
+  Database,
+  LockKeyhole,
+  LogOut,
+  Send,
+  ShieldAlert,
+  Trash2,
+  UserPlus,
+} from "lucide-react";
 import { useAppStore } from "../data/store";
-import { Card, PageHeader, Button, Input, Select, Label, Textarea } from "../components/ui";
-import { ShieldAlert, LogIn, LogOut, Loader2, UserPlus, Swords, Bell, Database, Trash2, Send } from "lucide-react";
-import { Announcement, Match, Member } from "../types";
+import {
+  Button,
+  Card,
+  Input,
+  Label,
+  PageHeader,
+  Select,
+  Textarea,
+} from "../components/ui";
+import type { Announcement, Member } from "../types";
 import { getAdminTabFromSearch } from "../lib/appInsights";
+import { TEAM_GROUPS, validateAdminPortalPassword } from "../lib/mvpApp";
+import { normalizeUsername } from "../lib/localAuth";
+
+const tabs = [
+  { id: "general", icon: Database, label: "Systems" },
+  { id: "members", icon: UserPlus, label: "Members & Teams" },
+  { id: "announcements", icon: Bell, label: "Announcements" },
+];
 
 export default function Admin() {
   const {
@@ -12,18 +37,19 @@ export default function Admin() {
     setIsAdmin,
     members,
     setMembers,
-    matches,
-    setMatches,
+    assignMemberTeam,
     announcements,
     setAnnouncements,
-    resetData
+    resetData,
   } = useAppStore();
-
   const [searchParams, setSearchParams] = useSearchParams();
-  const [simulating, setSimulating] = useState(false);
   const [activeTab, setActiveTab] = useState(() =>
     getAdminTabFromSearch(window.location.search),
   );
+  const [password, setPassword] = useState("");
+  const [accessError, setAccessError] = useState("");
+  const [memberError, setMemberError] = useState("");
+  const [assignmentMessage, setAssignmentMessage] = useState("");
 
   useEffect(() => {
     setActiveTab(getAdminTabFromSearch(`?${searchParams.toString()}`));
@@ -34,90 +60,116 @@ export default function Admin() {
     setSearchParams(tab === "general" ? {} : { tab });
   };
 
-  const toggleAdmin = () => {
-    setSimulating(true);
-    setTimeout(() => {
-      setIsAdmin(!isAdmin);
-      setSimulating(false);
-    }, 600);
+  const unlockPortal = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    if (!validateAdminPortalPassword(password)) {
+      setAccessError("Admin Portal password is incorrect.");
+      return;
+    }
+
+    setIsAdmin(true);
+    setAccessError("");
+    setPassword("");
   };
 
-  const handleAddMember = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
+  const handleAddMember = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setMemberError("");
+
+    const form = event.currentTarget;
     const formData = new FormData(form);
-    
+    const username = normalizeUsername(formData.get("username") as string);
+
+    if (!/^[a-z0-9_]{3,20}$/.test(username)) {
+      setMemberError("Usernames must use 3-20 lowercase letters, numbers, or underscores.");
+      return;
+    }
+
+    if (members.some((member) => member.username === username)) {
+      setMemberError("That username already exists in the roster.");
+      return;
+    }
+
     const newMember: Member = {
-      id: `member-${Date.now()}`,
-      playerName: formData.get("playerName") as string,
-      mlbbId: formData.get("mlbbId") as string,
-      serverId: formData.get("serverId") as string,
+      id: `member_${Date.now()}`,
+      username,
+      playerName: (formData.get("playerName") as string).trim(),
+      mlbbId: (formData.get("mlbbId") as string).trim(),
+      serverId: (formData.get("serverId") as string).trim(),
       mainRole: formData.get("mainRole") as string,
       secondaryRole: formData.get("secondaryRole") as string,
-      mainHeroes: ["Chou"],
-      currentRank: "Epic",
-      highestRank: "Mythic",
+      mainHeroes: ((formData.get("mainHeroes") as string) || "Chou")
+        .split(",")
+        .map((hero) => hero.trim())
+        .filter(Boolean),
+      currentRank: (formData.get("currentRank") as string).trim() || "Epic",
+      highestRank: (formData.get("highestRank") as string).trim() || "Mythic",
       team: formData.get("team") as string,
       status: "Active",
-      royalPoints: 0,
-      attendanceRate: 0
+      bannerId: "chou-stun",
     };
 
     setMembers([...members, newMember]);
     form.reset();
   };
 
-  const handleLogMatch = (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const form = e.target as HTMLFormElement;
+  const handleAssignment = (memberId: string, teamName: string) => {
+    const result = assignMemberTeam(memberId, teamName);
+    setAssignmentMessage(result.ok ? "Team assignment updated." : result.error ?? "Assignment failed.");
+  };
+
+  const handleAnnouncement = (event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    const form = event.currentTarget;
     const formData = new FormData(form);
 
-    const newMatch: Match = {
-      id: `match-${Date.now()}`,
+    const newAnnouncement: Announcement = {
+      id: `ann_${Date.now()}`,
+      title: formData.get("title") as string,
+      message: formData.get("message") as string,
+      priority: formData.get("priority") as string,
+      postedBy: "Admin Portal",
       date: new Date().toISOString().split("T")[0],
-      matchType: formData.get("matchType") as string,
-      team: formData.get("team") as string,
-      enemyTeam: formData.get("enemyTeam") as string,
-      result: formData.get("result") as string,
-      mvp: formData.get("mvp") as string,
-      bestPerformer: "N/A",
-      mainMistake: "N/A",
-      notes: formData.get("notes") as string
     };
 
-    setMatches([...matches, newMatch]);
+    setAnnouncements([...announcements, newAnnouncement]);
     form.reset();
   };
 
   if (!isAdmin) {
     return (
-      <Card className="max-w-md mx-auto mt-20 text-center p-8 border-gold/30 shadow-gold relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-4 opacity-5">
-          <ShieldAlert size={120} />
-        </div>
-        <ShieldAlert
-          size={48}
-          className="mx-auto text-gold mb-6 relative z-10"
-        />
-        <h2 className="text-2xl font-display font-black mb-2 relative z-10">
-          RESTRICTED ACCESS
-        </h2>
-        <p className="text-text-muted mb-8 relative z-10 font-medium">
-          Authorization required. You must be a Squad Leader to access the strategic command panel.
+      <Card className="mx-auto mt-16 max-w-md p-8 text-center">
+        <ShieldAlert size={48} className="mx-auto mb-6 text-gold" />
+        <h1 className="font-display text-2xl font-black uppercase text-white">
+          Admin Portal
+        </h1>
+        <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
+          Enter the local MVP password to unlock roster assignment and admin tools.
         </p>
-        <Button
-          onClick={toggleAdmin}
-          disabled={simulating}
-          className="w-full relative z-10 font-black uppercase tracking-widest h-12"
-        >
-          {simulating ? (
-            <Loader2 className="animate-spin w-5 h-5 mx-auto" />
-          ) : (
-            <span className="flex items-center gap-2 justify-center">
-              <LogIn size={18} /> Authenticate for Demo
-            </span>
+        <form className="mt-8 space-y-4" onSubmit={unlockPortal}>
+          <div className="space-y-2 text-left">
+            <Label>Portal Password</Label>
+            <div className="relative">
+              <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+              <Input
+                type="password"
+                value={password}
+                onChange={(event) => setPassword(event.target.value)}
+                autoComplete="current-password"
+                className="pl-11"
+              />
+            </div>
+          </div>
+          {accessError && (
+            <div className="rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs font-black uppercase tracking-widest text-danger">
+              {accessError}
+            </div>
           )}
-        </Button>
+          <Button variant="gold" className="w-full gap-2">
+            <LockKeyhole size={16} />
+            Unlock Admin Portal
+          </Button>
+        </form>
       </Card>
     );
   }
@@ -125,28 +177,30 @@ export default function Admin() {
   return (
     <div className="space-y-8 pb-10 text-left">
       <PageHeader
-        title="Command Panel"
-        description="Strategic administration and squad configuration protocols."
+        title="Admin Portal"
+        description="Local MVP controls for roster assignment and squad broadcasts."
       >
-        <Button variant="danger" size="sm" onClick={toggleAdmin} className="font-black uppercase tracking-widest">
-          <LogOut size={16} className="mr-2" /> Decouple
+        <Button
+          variant="danger"
+          size="sm"
+          onClick={() => setIsAdmin(false)}
+          className="gap-2"
+        >
+          <LogOut size={16} />
+          Lock Portal
         </Button>
       </PageHeader>
 
-      <div className="flex gap-4 border-b border-white/5 mb-6 overflow-x-auto pb-4">
-        {[
-          {id: "general", icon: Database, label: "Systems"},
-          {id: "members", icon: UserPlus, label: "Personnel"},
-          {id: "matches", icon: Swords, label: "Combat Log"},
-          {id: "announcements", icon: Bell, label: "Broadcast"}
-        ].map((tab) => (
+      <div className="flex gap-3 overflow-x-auto border-b border-white/5 pb-4">
+        {tabs.map((tab) => (
           <button
             key={tab.id}
+            type="button"
             onClick={() => selectTab(tab.id)}
-            className={`flex items-center gap-2 py-2.5 px-4 rounded-xl text-xs font-black uppercase tracking-widest transition-all relative whitespace-nowrap ${
+            className={`flex items-center gap-2 whitespace-nowrap rounded-lg px-4 py-2.5 text-xs font-black uppercase tracking-widest transition ${
               activeTab === tab.id
                 ? "bg-gold text-background shadow-gold"
-                : "bg-surface border border-white/5 text-text-muted hover:text-white hover:border-gold/30"
+                : "border border-blue-200/10 bg-surface text-text-muted hover:border-gold/30 hover:text-white"
             }`}
           >
             <tab.icon size={14} />
@@ -155,191 +209,227 @@ export default function Admin() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-12 gap-8">
-        {/* Sidebar / Forms area */}
-        <div className="md:col-span-12 lg:col-span-5 space-y-6">
-          {activeTab === "general" && (
-            <Card className="border-danger/20 p-8">
-              <h3 className="text-xl font-black mb-2 font-display uppercase tracking-widest text-danger">
-                Critical Systems
-              </h3>
-              <p className="text-sm text-text-muted mb-6 font-medium leading-relaxed">
-                Resetting the data core will purge all local tactical records and restore default squad configurations. This action is irreversible.
-              </p>
-              <Button variant="danger" className="w-full gap-2 font-black uppercase h-12" onClick={resetData}>
-                <Trash2 size={18} /> Purge Data Core
+      {activeTab === "general" && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          <Card className="p-6">
+            <h2 className="font-display text-xl font-black uppercase text-white">
+              MVP Data Core
+            </h2>
+            <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
+              Reset local roster, announcements, tryouts, and notifications while
+              preserving the current auth account.
+            </p>
+            <Button variant="danger" className="mt-6 gap-2" onClick={resetData}>
+              <Trash2 size={18} />
+              Reset MVP Data
+            </Button>
+          </Card>
+          <Card className="p-6">
+            <h2 className="font-display text-xl font-black uppercase text-white">
+              Current Scope
+            </h2>
+            <div className="mt-5 grid grid-cols-3 gap-3">
+              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
+                <p className="text-2xl font-black text-white">{members.length}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Members
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
+                <p className="text-2xl font-black text-white">{announcements.length}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Posts
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
+                <p className="text-2xl font-black text-white">{TEAM_GROUPS.length}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Teams
+                </p>
+              </div>
+            </div>
+          </Card>
+        </div>
+      )}
+
+      {activeTab === "members" && (
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[420px_1fr]">
+          <Card className="p-6">
+            <h2 className="mb-6 flex items-center gap-2 font-display text-xl font-black uppercase tracking-widest text-gold">
+              <UserPlus size={20} />
+              Register Member
+            </h2>
+            <form className="space-y-5" onSubmit={handleAddMember}>
+              <div className="space-y-2">
+                <Label>Username</Label>
+                <Input name="username" required autoCapitalize="none" spellCheck={false} />
+              </div>
+              <div className="space-y-2">
+                <Label>Player Name</Label>
+                <Input name="playerName" required className="font-black uppercase" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>MLBB ID</Label>
+                  <Input name="mlbbId" required />
+                </div>
+                <div className="space-y-2">
+                  <Label>Server</Label>
+                  <Input name="serverId" required />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Current Rank</Label>
+                  <Input name="currentRank" />
+                </div>
+                <div className="space-y-2">
+                  <Label>Highest Rank</Label>
+                  <Input name="highestRank" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Main Role</Label>
+                  <Select name="mainRole">
+                    <option>EXP Lane</option>
+                    <option>Jungle</option>
+                    <option>Mid Lane</option>
+                    <option>Gold Lane</option>
+                    <option>Roam</option>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Secondary Role</Label>
+                  <Select name="secondaryRole">
+                    <option>Roam</option>
+                    <option>EXP Lane</option>
+                    <option>Jungle</option>
+                    <option>Mid Lane</option>
+                    <option>Gold Lane</option>
+                  </Select>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Assigned Team</Label>
+                <Select name="team">
+                  {TEAM_GROUPS.map((team) => (
+                    <option key={team}>{team}</option>
+                  ))}
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Main Heroes</Label>
+                <Input name="mainHeroes" />
+              </div>
+              {memberError && (
+                <div className="rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs font-black uppercase tracking-widest text-danger">
+                  {memberError}
+                </div>
+              )}
+              <Button variant="gold" className="w-full">
+                Commit Member
               </Button>
-            </Card>
-          )}
+            </form>
+          </Card>
 
-          {activeTab === "members" && (
-            <Card className="p-8">
-              <h3 className="text-xl font-black mb-6 font-display uppercase tracking-widest text-gold flex items-center gap-2">
-                <UserPlus size={20} /> Register Personnel
-              </h3>
-              <form className="space-y-6" onSubmit={handleAddMember}>
-                <div className="space-y-2">
-                   <Label>Combat Name</Label>
-                   <Input name="playerName" required placeholder="NICKNAME..." className="uppercase font-black" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                      <Label>Standard Role</Label>
-                      <Select name="mainRole">
-                         <option>EXP Lane</option>
-                         <option>Jungle</option>
-                         <option>Mid Lane</option>
-                         <option>Gold Lane</option>
-                         <option>Roam</option>
-                      </Select>
-                   </div>
-                   <div className="space-y-2">
-                      <Label>Assigned Division</Label>
-                      <Select name="team">
-                         <option>Team Sovereign</option>
-                         <option>Royal Valor</option>
-                         <option>Academy</option>
-                      </Select>
-                   </div>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                   <div className="space-y-2">
-                      <Label>MLBB ID</Label>
-                      <Input name="mlbbId" required placeholder="00000000" />
-                   </div>
-                   <div className="space-y-2">
-                      <Label>Server</Label>
-                      <Input name="serverId" required placeholder="0000" />
-                   </div>
-                </div>
-                <Button className="w-full font-black uppercase tracking-widest h-12">Commit to Roster</Button>
-              </form>
-            </Card>
-          )}
-
-          {activeTab === "announcements" && (
-            <Card className="p-8">
-              <h3 className="text-xl font-black mb-6 font-display uppercase tracking-widest text-gold flex items-center gap-2">
-                <Bell size={20} /> Dispatch Decree
-              </h3>
-              <form
-                className="space-y-6"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  const form = e.target as HTMLFormElement;
-                  const formData = new FormData(form);
-                  
-                  const newAnnouncement: Announcement = {
-                    id: `ann_${Date.now()}`,
-                    title: formData.get("title") as string,
-                    message: formData.get("message") as string,
-                    priority: formData.get("priority") as string,
-                    postedBy: "Supreme Admin",
-                    date: new Date().toISOString().split("T")[0],
-                  };
-                  setAnnouncements([...announcements, newAnnouncement]);
-                  form.reset();
-                }}
-              >
-                <div className="space-y-2">
-                   <Label>Subject Line</Label>
-                   <Input name="title" required placeholder="OPERATION UPDATE..." className="uppercase font-black" />
-                </div>
-                <div className="space-y-2">
-                   <Label>Priority Protocol</Label>
-                   <Select name="priority">
-                      <option>Normal</option>
-                      <option>Important</option>
-                      <option>Urgent</option>
-                   </Select>
-                </div>
-                <div className="space-y-2">
-                   <Label>Mandatory Directive</Label>
-                   <Textarea name="message" required rows={4} placeholder="ENTER COMMUNICATIONS..." className="font-medium" />
-                </div>
-                <Button className="w-full gap-2 font-black uppercase tracking-widest h-12">
-                   <Send size={18} /> Execute Broadcast
-                </Button>
-              </form>
-            </Card>
-          )}
-
-          {activeTab === "matches" && (
-            <Card className="p-8">
-              <h3 className="text-xl font-black mb-6 font-display uppercase tracking-widest text-gold flex items-center gap-2">
-                <Swords size={20} /> Capture Battle Data
-              </h3>
-              <form className="space-y-6" onSubmit={handleLogMatch}>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                       <Label>Engagement Type</Label>
-                       <Select name="matchType">
-                          <option>Ranked Push</option>
-                          <option>Scrim (Training)</option>
-                          <option>Official Tournament</option>
-                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                       <Label>Engagement Result</Label>
-                       <Select name="result">
-                          <option>Win</option>
-                          <option>Loss</option>
-                          <option>Cancelled</option>
-                       </Select>
-                    </div>
-                 </div>
-                 <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                       <Label>Our Division</Label>
-                       <Select name="team">
-                          {Array.from(new Set(members.map(m => m.team))).map(t => (
-                            <option key={t}>{t}</option>
-                          ))}
-                       </Select>
-                    </div>
-                    <div className="space-y-2">
-                       <Label>Enemy Objective</Label>
-                       <Input name="enemyTeam" required placeholder="OPPOSITION NAME..." className="uppercase font-black" />
-                    </div>
-                 </div>
-                 <div className="space-y-2">
-                    <Label>MVP / Top Operator</Label>
-                    <Select name="mvp">
-                       {members.map(m => (
-                         <option key={m.id}>{m.playerName}</option>
-                       ))}
-                    </Select>
-                 </div>
-                 <div className="space-y-2">
-                    <Label>Tactical Observations</Label>
-                    <Textarea name="notes" placeholder="ANALYSIS OF PERFORMANCE..." className="font-medium" rows={3} />
-                 </div>
-                 <Button className="w-full font-black uppercase tracking-widest h-14">Archive Report</Button>
-              </form>
-            </Card>
-          )}
-        </div>
-
-        {/* Content area */}
-        <div className="md:col-span-12 lg:col-span-7">
-           <Card className="p-0 overflow-hidden border-white/5 h-full min-h-[600px] flex flex-col bg-surface-hover/20">
-              <div className="p-6 border-b border-white/5 bg-surface/50">
-                 <h4 className="text-xs font-black uppercase tracking-[0.3em] text-text-muted">Live Command Feed</h4>
-              </div>
-              <div className="flex-1 p-8 flex items-center justify-center text-center">
-                 <div className="max-w-xs space-y-4 opacity-30">
-                    <ShieldAlert size={80} className="mx-auto text-gold" strokeWidth={1} />
-                    <p className="text-lg font-black uppercase tracking-tight text-white leading-tight">
-                       Tactical Management Subsystem
+          <Card className="p-6">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h2 className="font-display text-xl font-black uppercase text-white">
+                Team Assignment
+              </h2>
+              {assignmentMessage && (
+                <span className="text-[10px] font-black uppercase tracking-widest text-gold">
+                  {assignmentMessage}
+                </span>
+              )}
+            </div>
+            <div className="space-y-3">
+              {members.map((member) => (
+                <div
+                  key={member.id}
+                  className="grid gap-3 rounded-lg border border-blue-200/10 bg-background/45 p-4 md:grid-cols-[1fr_240px]"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-black uppercase text-white">
+                      {member.playerName}
                     </p>
-                    <p className="text-xs font-medium text-text-muted">
-                       Authorized operators can modify the squad's data core via the protocols on the left. Changes are synchronized across all devices in real-time.
+                    <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                      @{member.username} / {member.currentRank}
                     </p>
-                 </div>
-              </div>
-           </Card>
+                  </div>
+                  <Select
+                    value={member.team}
+                    onChange={(event) => handleAssignment(member.id, event.target.value)}
+                  >
+                    {TEAM_GROUPS.map((team) => (
+                      <option key={team}>{team}</option>
+                    ))}
+                  </Select>
+                </div>
+              ))}
+            </div>
+          </Card>
         </div>
-      </div>
+      )}
+
+      {activeTab === "announcements" && (
+        <div className="grid grid-cols-1 gap-8 xl:grid-cols-[420px_1fr]">
+          <Card className="p-6">
+            <h2 className="mb-6 flex items-center gap-2 font-display text-xl font-black uppercase tracking-widest text-gold">
+              <Bell size={20} />
+              Broadcast
+            </h2>
+            <form className="space-y-5" onSubmit={handleAnnouncement}>
+              <div className="space-y-2">
+                <Label>Subject</Label>
+                <Input name="title" required className="font-black uppercase" />
+              </div>
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select name="priority">
+                  <option>Normal</option>
+                  <option>Important</option>
+                  <option>Urgent</option>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Message</Label>
+                <Textarea name="message" required rows={5} />
+              </div>
+              <Button variant="gold" className="w-full gap-2">
+                <Send size={18} />
+                Send Announcement
+              </Button>
+            </form>
+          </Card>
+
+          <Card className="p-6">
+            <h2 className="mb-5 font-display text-xl font-black uppercase text-white">
+              Recent Announcements
+            </h2>
+            <div className="space-y-3">
+              {announcements
+                .slice()
+                .reverse()
+                .slice(0, 6)
+                .map((announcement) => (
+                  <div
+                    key={announcement.id}
+                    className="rounded-lg border border-blue-200/10 bg-background/45 p-4"
+                  >
+                    <p className="text-sm font-black uppercase text-white">
+                      {announcement.title}
+                    </p>
+                    <p className="mt-1 text-xs font-semibold text-text-muted">
+                      {announcement.date} / {announcement.priority}
+                    </p>
+                  </div>
+                ))}
+            </div>
+          </Card>
+        </div>
+      )}
     </div>
   );
 }

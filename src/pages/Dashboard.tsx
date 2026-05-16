@@ -1,356 +1,342 @@
-import { useAppStore } from "../data/store";
-import { Card, Button, Badge } from "../components/ui";
-import { cn } from "../lib/utils";
-import {
-  Users,
-  Swords,
-  Calendar as CalendarIcon,
-  Trophy,
-  Megaphone,
-  Zap,
-  ArrowRight,
-  ShieldCheck,
-  UserPlus,
-  Crown,
-} from "lucide-react";
 import { Link } from "react-router-dom";
-import { getNextScheduledEvent } from "../lib/appInsights";
-import { HeroIcon } from "../components/HeroIcon";
+import {
+  Activity,
+  Bell,
+  Megaphone,
+  Shield,
+  TrendingUp,
+  UserCircle,
+  UserPlus,
+  Users,
+  X,
+} from "lucide-react";
+import { useMemo, useState } from "react";
+import { useAppStore } from "../data/store";
+import { Badge, Button, Card } from "../components/ui";
+import {
+  getLatestAnnouncements,
+  getProfileBanner,
+  TEAM_GROUPS,
+  groupMembersByTeam,
+} from "../lib/mvpApp";
+
+type QuickPanel = "announcements" | "teams" | "tryouts" | "profile" | "notify";
+
+const quickActions = [
+  { id: "announcements", label: "Announcements", icon: Megaphone },
+  { id: "teams", label: "Teams", icon: Users },
+  { id: "tryouts", label: "Tryouts", icon: UserPlus },
+  { id: "profile", label: "Profile", icon: UserCircle },
+] satisfies { id: QuickPanel; label: string; icon: typeof Megaphone }[];
+
+const analyticsCards = [
+  { label: "Win Trend", value: "Coming soon", icon: TrendingUp },
+  { label: "Hero Pool", value: "Coming soon", icon: Shield },
+  { label: "Activity", value: "Local MVP", icon: Activity },
+];
 
 export default function Dashboard() {
-  const { members, matches, schedule, announcements, tryouts, isAdmin } = useAppStore();
+  const {
+    members,
+    announcements,
+    tryouts,
+    notifications,
+    authUser,
+    notifyTeamOnline,
+  } = useAppStore();
+  const [activePanel, setActivePanel] = useState<QuickPanel | null>(null);
 
-  const activeMembersCount = members.filter((m) => m.status === "Active").length;
-  const nextOperation = getNextScheduledEvent(schedule);
-  const latestAnnouncement =
-    announcements.length > 0 ? announcements[announcements.length - 1] : null;
-  const pendingTryoutsCount = tryouts.filter((t) => t.status === "Pending").length;
+  const currentMember =
+    members.find((member) => member.username === authUser?.username) ?? members[0];
+  const latestAnnouncements = useMemo(
+    () => getLatestAnnouncements(announcements),
+    [announcements],
+  );
+  const teamGroups = useMemo(() => groupMembersByTeam(members), [members]);
+  const pendingTryoutsCount = tryouts.filter((tryout) =>
+    ["Pending", "Trial", "Needs Test Match"].includes(tryout.status),
+  ).length;
+  const banner = getProfileBanner(currentMember?.bannerId);
 
-  const topPlayers = [...members]
-    .sort((a, b) => b.royalPoints - a.royalPoints)
-    .slice(0, 5);
-  const recentMatches = [...matches]
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-    .slice(0, 4);
+  const openPanel = (panel: QuickPanel) => {
+    if (panel === "notify") {
+      notifyTeamOnline();
+    }
+    setActivePanel(panel);
+  };
 
   return (
-    <div className="space-y-8 pb-10">
-      {/* Hero Section */}
-      <section className="battle-panel p-6 md:p-10">
-        <div className="relative z-10 grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-          <div className="lg:col-span-7">
-          <Badge variant="gold" className="mb-5">Squad Lobby: Ready</Badge>
-          <h1 className="text-4xl md:text-6xl font-display font-black text-white mb-4 uppercase leading-none mlbb-title">
-            Enter the <span className="gold-gradient-text">Land of Dawn</span>
-          </h1>
-          <p className="text-lg text-text-muted font-medium mb-8 max-w-xl">
-            Track heroes, ranked pressure, operations, and battle records from
-            one Royal Supremacy command lobby.
-          </p>
-          <div className="flex flex-wrap gap-4">
-            <Link to="/schedule">
-              <Button variant="gold" className="gap-2">
-                <CalendarIcon size={18} />
-                Queue Operations
-              </Button>
-            </Link>
-            <Link to="/members">
-              <Button variant="secondary" className="gap-2">
-                <Users size={18} />
-                Hero Roster
-              </Button>
-            </Link>
-          </div>
-          <div className="battle-divider mt-8 max-w-xl" />
-          <div className="mt-5 grid grid-cols-3 gap-3 max-w-lg">
-            <div>
-              <div className="text-2xl font-black text-white">{members.length}</div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                Squad
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-gold">{matches.length}</div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                Battles
-              </div>
-            </div>
-            <div>
-              <div className="text-2xl font-black text-purple-light">
-                {nextOperation ? nextOperation.time : "--"}
-              </div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                Next Call
-              </div>
-            </div>
-          </div>
+    <div className="space-y-8 pb-10 text-left">
+      <section
+        className="battle-panel min-h-[280px] p-6 md:p-8"
+        style={{
+          backgroundImage: `linear-gradient(90deg, rgba(3,7,18,0.96) 0%, rgba(3,7,18,0.86) 46%, rgba(3,7,18,0.42) 100%), url(${banner.src})`,
+          backgroundPosition: "center",
+          backgroundSize: "cover",
+        }}
+      >
+        <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
+          <div className="max-w-2xl">
+            <Badge variant="gold" className="mb-4">
+              MVP Command Center
+            </Badge>
+            <h1 className="font-display text-4xl font-black uppercase leading-none text-white md:text-5xl mlbb-title">
+              Royal Supremacy
+            </h1>
+            <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-text-muted">
+              Player profile, squad teams, announcements, tryouts, and admin
+              assignment are ready for the first usable squad build.
+            </p>
           </div>
 
-          <div className="lg:col-span-5">
-            <div className="grid grid-cols-3 gap-3 sm:gap-4">
-              {topPlayers.slice(0, 3).map((player, index) => (
-                <div
-                  key={player.id}
-                  className={cn(
-                    "relative p-3 bg-background/55 border border-blue-200/15",
-                    index === 0 ? "translate-y-0" : "translate-y-6",
-                  )}
-                >
-                  <div className="absolute -top-2 -left-2 h-6 w-6 bg-gold text-background text-[10px] font-black flex items-center justify-center">
-                    {index + 1}
-                  </div>
-                  <HeroIcon
-                    heroName={player.mainHeroes[0]}
-                    className="hero-token aspect-square w-full"
-                  />
-                  <div className="mt-3 text-center">
-                    <div className="truncate text-xs font-black uppercase text-white">
-                      {player.playerName}
-                    </div>
-                    <div className="text-[10px] font-black uppercase tracking-widest text-gold">
-                      {player.mainHeroes[0]}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <div className="mt-8 border border-gold/20 bg-background/50 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  Next Operation
-                </span>
-                <Badge variant="purple">{nextOperation?.type || "Standby"}</Badge>
+          <Card className="p-5">
+            <div className="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Current Player
+                </p>
+                <h2 className="mt-1 text-2xl font-black uppercase text-white">
+                  {currentMember?.playerName ?? "King Choou"}
+                </h2>
               </div>
-              <div className="mt-2 text-lg font-black text-white">
-                {nextOperation?.title || "Awaiting Orders"}
-              </div>
-              <div className="text-xs font-bold text-text-muted">
-                {nextOperation
-                  ? `${nextOperation.date} at ${nextOperation.time}`
-                  : "No queued operation"}
+              <div className="grid h-12 w-12 place-items-center rounded-lg border border-gold/30 bg-gold/10 text-lg font-black text-gold">
+                {(currentMember?.username ?? "k").slice(0, 1).toUpperCase()}
               </div>
             </div>
-          </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-lg border border-blue-200/10 bg-background/55 p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
+                  Username
+                </p>
+                <p className="mt-1 truncate text-sm font-black text-gold">
+                  @{currentMember?.username ?? authUser?.username ?? "kingchoou"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200/10 bg-background/55 p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
+                  Team
+                </p>
+                <p className="mt-1 truncate text-sm font-black text-white">
+                  {currentMember?.team ?? "Unassigned"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200/10 bg-background/55 p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
+                  Role
+                </p>
+                <p className="mt-1 truncate text-sm font-black text-white">
+                  {currentMember?.mainRole ?? "EXP Lane"}
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200/10 bg-background/55 p-3">
+                <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
+                  Rank
+                </p>
+                <p className="mt-1 truncate text-sm font-black text-white">
+                  {currentMember?.currentRank ?? "Mythical Honor"}
+                </p>
+              </div>
+            </div>
+          </Card>
         </div>
       </section>
 
-      {/* Grid Layout */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 bg-gold/10 flex items-center justify-center text-gold shrink-0 border border-gold/25 group-hover:bg-gold/20 transition-colors">
-            <Users size={28} />
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest font-black text-text-muted mb-0.5">Total Squad</p>
-            <div className="flex items-baseline gap-2">
-              <h3 className="text-3xl font-black text-white">{members.length}</h3>
-              <span className="text-[10px] font-black text-success uppercase">{activeMembersCount} Active</span>
+      <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+        {analyticsCards.map((card) => {
+          const Icon = card.icon;
+
+          return (
+            <Card key={card.label} className="p-5">
+              <div className="flex items-center gap-4">
+                <div className="grid h-12 w-12 shrink-0 place-items-center rounded-lg border border-blue-200/10 bg-surface-hover text-gold">
+                  <Icon size={22} />
+                </div>
+                <div>
+                  <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                    {card.label}
+                  </p>
+                  <p className="mt-1 text-lg font-black text-white">{card.value}</p>
+                </div>
+              </div>
+            </Card>
+          );
+        })}
+      </div>
+
+      <div className="grid gap-8 lg:grid-cols-[1fr_360px]">
+        <Card className="p-6">
+          <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <h2 className="font-display text-2xl font-black uppercase text-white">
+                Quick Actions
+              </h2>
+              <p className="mt-1 text-sm font-semibold text-text-muted">
+                Small controls for the core MVP routes.
+              </p>
             </div>
+            <Button variant="gold" size="sm" className="gap-2" onClick={() => openPanel("notify")}>
+              <Bell size={14} />
+              Notify Team
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+            {quickActions.map((action) => {
+              const Icon = action.icon;
+
+              return (
+                <button
+                  key={action.id}
+                  type="button"
+                  onClick={() => openPanel(action.id)}
+                  className="flex min-h-24 flex-col items-start justify-between rounded-lg border border-blue-200/10 bg-background/50 p-4 text-left transition hover:border-gold/30 hover:bg-surface-hover"
+                >
+                  <Icon className="h-5 w-5 text-gold" />
+                  <span className="text-xs font-black uppercase tracking-widest text-white">
+                    {action.label}
+                  </span>
+                </button>
+              );
+            })}
           </div>
         </Card>
 
-        <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 bg-purple-royal/20 flex items-center justify-center text-purple-light shrink-0 border border-purple-royal/35 group-hover:bg-purple-royal/30 transition-colors">
-            <Zap size={28} />
+        <Card className="p-6">
+          <div className="mb-5 flex items-center justify-between">
+            <h2 className="font-display text-xl font-black uppercase text-white">
+              Activity Feed
+            </h2>
+            <Badge variant="gold">{notifications.length}</Badge>
           </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest font-black text-text-muted mb-0.5">Next Operation</p>
-            <h3 className="text-lg font-bold text-white truncate max-w-[140px]">
-              {nextOperation ? nextOperation.type : "Standby"}
-            </h3>
-            <p className="text-[10px] text-text-muted font-bold truncate">
-              {nextOperation ? `${nextOperation.date} at ${nextOperation.time}` : "Awaiting Orders"}
-            </p>
-          </div>
-        </Card>
-
-        <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 bg-success/10 flex items-center justify-center text-success shrink-0 border border-success/20 group-hover:bg-success/20 transition-colors">
-            <Swords size={28} />
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest font-black text-text-muted mb-0.5">Total Matches</p>
-            <h3 className="text-3xl font-black text-white">{matches.length}</h3>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Recorded</p>
-          </div>
-        </Card>
-
-        <Card className="flex items-center gap-4 p-6 glass-card-hover group">
-          <div className="w-14 h-14 bg-orange-500/10 flex items-center justify-center text-orange-400 shrink-0 border border-orange-500/20 group-hover:bg-orange-500/20 transition-colors">
-            <UserPlus size={28} />
-          </div>
-          <div>
-            <p className="text-[10px] uppercase tracking-widest font-black text-text-muted mb-0.5">Applications</p>
-            <h3 className="text-3xl font-black text-white">{pendingTryoutsCount}</h3>
-            <p className="text-[10px] text-text-muted font-bold uppercase tracking-widest">Pending Review</p>
+          <div className="space-y-3">
+            {notifications.length > 0 ? (
+              notifications.slice(0, 5).map((notification) => (
+                <div
+                  key={notification.id}
+                  className="rounded-lg border border-blue-200/10 bg-background/50 p-3"
+                >
+                  <p className="text-sm font-black text-white">{notification.message}</p>
+                  <p className="mt-1 text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                    {new Date(notification.createdAt).toLocaleString()}
+                  </p>
+                </div>
+              ))
+            ) : (
+              <div className="rounded-lg border border-dashed border-blue-200/10 bg-background/35 p-6 text-center text-sm font-semibold text-text-muted">
+                Team notifications will appear here.
+              </div>
+            )}
           </div>
         </Card>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        {/* Main Content Areas */}
-        <div className="lg:col-span-8 space-y-8">
-          {/* Quick Stats & Promo */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-            {latestAnnouncement && (
-              <Card className="relative overflow-hidden group">
-                <div className="flex items-center gap-2 text-gold mb-4">
-                  <Megaphone size={16} />
-                  <span className="text-[10px] font-black uppercase tracking-widest">Latest Announcement</span>
-                </div>
-                <h4 className="text-xl font-display font-bold text-white mb-2 leading-tight">
-                  {latestAnnouncement.title}
-                </h4>
-                <p className="text-sm text-text-muted line-clamp-2 mb-4 font-medium">
-                  {latestAnnouncement.message}
-                </p>
-                <div className="flex items-center justify-between mt-auto pt-4 border-t border-white/5">
-                  <span className="text-[10px] font-bold text-text-muted">{latestAnnouncement.date}</span>
-                  <Link to="/announcements">
-                    <Button variant="ghost" size="sm" className="group/btn">
-                      Read Full <ArrowRight size={14} className="ml-1 group-hover/btn:translate-x-1 transition-transform" />
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
+      {activePanel && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/75 p-4">
+          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg border border-gold/20 bg-surface p-6 shadow-2xl">
+            <div className="mb-5 flex items-center justify-between gap-4">
+              <h3 className="font-display text-xl font-black uppercase text-white">
+                {activePanel === "notify" ? "Team Notified" : quickActions.find((item) => item.id === activePanel)?.label}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setActivePanel(null)}
+                className="grid h-9 w-9 place-items-center rounded-lg border border-blue-200/10 text-text-muted transition hover:border-gold/30 hover:text-white"
+                aria-label="Close modal"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {activePanel === "announcements" && (
+              <div className="space-y-3">
+                {latestAnnouncements.map((announcement) => (
+                  <div key={announcement.id} className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
+                    <div className="mb-2 flex items-center justify-between gap-3">
+                      <Badge variant={announcement.priority === "Urgent" ? "danger" : announcement.priority === "Important" ? "gold" : "purple"}>
+                        {announcement.priority}
+                      </Badge>
+                      <span className="text-[10px] font-bold text-text-muted">{announcement.date}</span>
+                    </div>
+                    <h4 className="font-black uppercase text-white">{announcement.title}</h4>
+                    <p className="mt-2 text-sm font-medium leading-6 text-text-muted">
+                      {announcement.message}
+                    </p>
+                  </div>
+                ))}
+                <Link to="/announcements" onClick={() => setActivePanel(null)}>
+                  <Button variant="secondary" className="mt-3 w-full">
+                    Open Announcements
+                  </Button>
+                </Link>
+              </div>
             )}
 
-            <Card className="bg-gradient-to-br from-purple-royal/20 to-transparent border-purple-royal/20">
-              <div className="flex items-center gap-2 text-purple-light mb-4">
-                <ShieldCheck size={16} />
-                <span className="text-[10px] font-black uppercase tracking-widest">Squad Mission</span>
-              </div>
-              <h4 className="text-xl font-display font-bold text-white mb-2 leading-tight">
-                Achieve Mythic Immortal
-              </h4>
-              <p className="text-sm text-text-muted font-medium mb-4">
-                Our current season primary goal is to have 100% of Royal Sovereign 
-                reach current highest tier by month end.
-              </p>
-              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full w-[65%] bg-purple-royal shadow-[0_0_10px_var(--color-purple-royal)]" />
-              </div>
-              <p className="text-[10px] text-right mt-2 text-purple-light font-black uppercase tracking-widest">65% Completed</p>
-            </Card>
-          </div>
-
-          <Card>
-            <div className="flex items-center justify-between mb-8">
-              <h3 className="font-display font-black text-2xl uppercase">
-                Recent Battles
-              </h3>
-              <Link to="/matches">
-                <Button variant="secondary" size="sm" className="gap-2">
-                  Match History <ArrowRight size={14} />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {recentMatches.map((match) => (
-                <div
-                  key={match.id}
-                  className="p-5 bg-surface-hover/35 border border-blue-200/10 hover:border-gold/25 transition-all group"
-                >
-                  <div className="flex items-center justify-between mb-3">
-                    <Badge variant={match.result === "Win" ? "success" : "danger"}>
-                      {match.result}
+            {activePanel === "teams" && (
+              <div className="space-y-3">
+                {TEAM_GROUPS.map((team) => (
+                  <div key={team} className="flex items-center justify-between rounded-lg border border-blue-200/10 bg-background/50 p-4">
+                    <span className="text-sm font-black uppercase text-white">{team}</span>
+                    <Badge variant={team === "Unassigned" ? "gold" : "purple"}>
+                      {teamGroups[team].length}
                     </Badge>
-                    <span className="text-[10px] font-bold text-text-muted">{match.date}</span>
                   </div>
-                  <div className="flex items-center justify-between gap-4 mb-4">
-                    <div className="flex flex-col items-center flex-1 text-center">
-                      <div className="w-10 h-10 rounded-full bg-purple-royal/20 flex items-center justify-center text-purple-light mb-2 font-black text-xs border border-purple-royal/20">RS</div>
-                      <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate w-full">{match.team}</span>
-                    </div>
-                    <span className="text-gold font-black italic">VS</span>
-                    <div className="flex flex-col items-center flex-1 text-center">
-                      <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-text-muted mb-2 font-black text-xs border border-white/10">OPP</div>
-                      <span className="text-[10px] font-bold text-white uppercase tracking-widest truncate w-full">{match.enemyTeam}</span>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-center font-black uppercase tracking-[0.2em] text-gold border-t border-white/5 pt-3 group-hover:tracking-[0.3em] transition-all">
-                    MVP: {match.mvp}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </Card>
-        </div>
-
-        {/* Right Sidebar Area */}
-        <div className="lg:col-span-4 space-y-8">
-          <Card className="premium-gradient-card">
-            <h3 className="flex items-center gap-2 font-display font-black text-xl uppercase tracking-widest mb-6">
-              <Trophy size={20} className="text-gold" />
-              Elite 5
-            </h3>
-            <div className="space-y-6">
-              {topPlayers.map((player, index) => (
-                <div key={player.id} className="group relative flex items-center gap-4">
-                  <div className="relative">
-                    <div className={cn(
-                      "w-12 h-12 rounded-2xl flex items-center justify-center font-black text-lg transition-transform group-hover:scale-110",
-                      index === 0 ? "bg-gold text-background shadow-gold" : 
-                      index === 1 ? "bg-slate-300 text-background" : 
-                      index === 2 ? "bg-amber-600 text-white" : 
-                      "bg-surface-hover text-text-muted border border-white/5"
-                    )}>
-                      {index + 1}
-                    </div>
-                    {index === 0 && (
-                      <Crown className="absolute -top-3 -right-3 w-6 h-6 text-gold drop-shadow-lg animate-bounce" />
-                    )}
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-white uppercase tracking-wider text-sm truncate">
-                      {player.playerName}
-                    </div>
-                    <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">
-                      {player.team}
-                    </div>
-                  </div>
-                  
-                  <div className="text-right">
-                    <div className="font-black text-gold text-lg leading-none">
-                      {player.royalPoints}
-                    </div>
-                    <div className="text-[10px] font-black text-text-muted uppercase tracking-widest">
-                      Points
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-            <Link to="/leaderboard" className="block mt-8">
-              <Button variant="secondary" className="w-full text-xs">Full Leaderboard</Button>
-            </Link>
-          </Card>
-
-          {isAdmin && (
-            <Card className="border-purple-royal/20 bg-purple-royal/5">
-              <h3 className="font-display font-black text-sm uppercase tracking-widest mb-4 flex items-center gap-2 text-purple-light">
-                <Zap size={14} />
-                Quick Admin Actions
-              </h3>
-              <div className="grid grid-cols-2 gap-2">
-                <Link to="/admin?tab=matches">
-                  <Button variant="secondary" size="sm" className="w-full text-[10px]">Log Match</Button>
-                </Link>
-                <Link to="/admin?tab=points">
-                  <Button variant="secondary" size="sm" className="w-full text-[10px]">Grant PTS</Button>
-                </Link>
-                <Link to="/admin?tab=announcements">
-                  <Button variant="secondary" size="sm" className="w-full text-[10px]">Post Note</Button>
-                </Link>
-                <Link to="/admin?tab=members">
-                  <Button variant="secondary" size="sm" className="w-full text-[10px]">Add Member</Button>
+                ))}
+                <Link to="/teams" onClick={() => setActivePanel(null)}>
+                  <Button variant="secondary" className="mt-3 w-full">
+                    Open Teams
+                  </Button>
                 </Link>
               </div>
-            </Card>
-          )}
+            )}
+
+            {activePanel === "tryouts" && (
+              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Active Tryout Files
+                </p>
+                <p className="mt-2 text-4xl font-black text-white">{pendingTryoutsCount}</p>
+                <Link to="/tryouts" onClick={() => setActivePanel(null)}>
+                  <Button variant="secondary" className="mt-5 w-full">
+                    Open Tryouts
+                  </Button>
+                </Link>
+              </div>
+            )}
+
+            {activePanel === "profile" && (
+              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Signed in as
+                </p>
+                <p className="mt-2 text-2xl font-black text-gold">
+                  @{currentMember?.username ?? authUser?.username}
+                </p>
+                <p className="mt-2 text-sm font-medium text-text-muted">
+                  Banner, email, password, MLBB ID, roles, and heroes live in your
+                  profile settings.
+                </p>
+                <Link to="/profile" onClick={() => setActivePanel(null)}>
+                  <Button variant="secondary" className="mt-5 w-full">
+                    Open Profile
+                  </Button>
+                </Link>
+              </div>
+            )}
+
+            {activePanel === "notify" && (
+              <div className="rounded-lg border border-gold/20 bg-background/50 p-5">
+                <p className="text-lg font-black text-white">
+                  {(notifications[0]?.message ?? `${currentMember?.username ?? "kingchoou"} is going online`)}
+                </p>
+                <p className="mt-2 text-sm font-medium leading-6 text-text-muted">
+                  This is a local in-app notification for the MVP. Later it can become
+                  a Supabase realtime or push notification.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

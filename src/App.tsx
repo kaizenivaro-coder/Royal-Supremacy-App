@@ -9,17 +9,13 @@ import RootLayout from "./components/layout";
 
 import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
-import Members from "./pages/Members";
 import Teams from "./pages/Teams";
-import Schedule from "./pages/Schedule";
-import Matches from "./pages/Matches";
-import Points from "./pages/Points";
-import Leaderboard from "./pages/Leaderboard";
 import Announcements from "./pages/Announcements";
 import Tryouts from "./pages/Tryouts";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import MobilePreview from "./pages/MobilePreview";
+import PausedFeature from "./pages/PausedFeature";
 
 function RequireAuth() {
   const { authUser } = useAppStore();
@@ -51,12 +47,12 @@ export default function App() {
           <Route path="/mobile-preview" element={<MobilePreview />} />
           <Route path="/" element={<RequireAuth />}>
             <Route index element={<Dashboard />} />
-            <Route path="members" element={<Members />} />
+            <Route path="members" element={<Navigate to="/teams" replace />} />
             <Route path="teams" element={<Teams />} />
-            <Route path="schedule" element={<Schedule />} />
-            <Route path="matches" element={<Matches />} />
-            <Route path="points" element={<Points />} />
-            <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="schedule" element={<PausedFeature featureName="Schedule" />} />
+            <Route path="matches" element={<PausedFeature featureName="Matches" />} />
+            <Route path="points" element={<PausedFeature featureName="Paused MVP Section" />} />
+            <Route path="leaderboard" element={<PausedFeature featureName="Leaderboard" />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="tryouts" element={<Tryouts />} />
             <Route path="admin" element={<Admin />} />

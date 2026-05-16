@@ -1,73 +1,40 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { getAdminTabFromSearch, filterMembers, getNextScheduledEvent } from "./appInsights.ts";
-import type { Member, ScheduleEvent } from "../types";
+import { getAdminTabFromSearch, filterMembers } from "./appInsights.ts";
+import type { Member } from "../types";
 
 const members = [
   {
     id: "member_001",
+    username: "kingchoou",
     playerName: "King Choou",
     mlbbId: "123",
     serverId: "1",
-    mainRole: "EXP",
+    mainRole: "EXP Lane",
     secondaryRole: "Roam",
     mainHeroes: ["Chou"],
     currentRank: "Mythical Honor",
     highestRank: "Mythical Glory",
-    team: "Team Sovereign",
+    team: "Unassigned",
     status: "Active",
-    royalPoints: 240,
-    attendanceRate: 92,
+    bannerId: "chou-stun",
   },
   {
     id: "member_002",
+    username: "shadow",
     playerName: "Shadow",
     mlbbId: "456",
     serverId: "2",
     mainRole: "Jungle",
-    secondaryRole: "EXP",
+    secondaryRole: "EXP Lane",
     mainHeroes: ["Ling"],
     currentRank: "Mythic",
     highestRank: "Mythical Honor",
-    team: "Royal Valor",
+    team: "Royal Valor Team A",
     status: "Trial",
-    royalPoints: 120,
-    attendanceRate: 70,
+    bannerId: "tigreal-lightborn",
   },
 ] satisfies Member[];
-
-const schedule = [
-  {
-    id: "past",
-    title: "Past Briefing",
-    type: "Team Meeting",
-    date: "2026-05-07",
-    time: "20:00",
-    team: "Team Sovereign",
-    description: "Already finished.",
-    attendance: {},
-  },
-  {
-    id: "next",
-    title: "Friday Ranked Push",
-    type: "Ranked Push",
-    date: "2026-05-08",
-    time: "20:00",
-    team: "Team Sovereign",
-    description: "Next operation.",
-    attendance: {},
-  },
-  {
-    id: "later",
-    title: "Sunday Scrim",
-    type: "Scrim",
-    date: "2026-05-10",
-    time: "19:00",
-    team: "Royal Valor",
-    description: "Later operation.",
-    attendance: {},
-  },
-] satisfies ScheduleEvent[];
 
 test("filterMembers combines query, status, role, and team filters", () => {
   assert.deepEqual(
@@ -75,7 +42,7 @@ test("filterMembers combines query, status, role, and team filters", () => {
       query: "shadow",
       role: "Jungle",
       status: "Trial",
-      team: "Royal Valor",
+      team: "Royal Valor Team A",
     }).map((member) => member.playerName),
     ["Shadow"],
   );
@@ -92,15 +59,9 @@ test("filterMembers searches ranks, heroes, ids, and secondary roles", () => {
   );
 });
 
-test("getNextScheduledEvent returns the nearest upcoming event of any type", () => {
-  assert.equal(
-    getNextScheduledEvent(schedule, new Date("2026-05-08T09:00:00"))?.title,
-    "Friday Ranked Push",
-  );
-});
-
-test("getAdminTabFromSearch only accepts supported admin tabs", () => {
-  assert.equal(getAdminTabFromSearch("?tab=matches"), "matches");
+test("getAdminTabFromSearch only accepts supported MVP admin tabs", () => {
+  assert.equal(getAdminTabFromSearch("?tab=members"), "members");
+  assert.equal(getAdminTabFromSearch("?tab=matches"), "general");
   assert.equal(getAdminTabFromSearch("?tab=unknown"), "general");
   assert.equal(getAdminTabFromSearch(""), "general");
 });

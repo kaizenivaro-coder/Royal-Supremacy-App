@@ -272,7 +272,7 @@ export default function Tryouts() {
               {/* Identity & Background */}
               <div className="p-8 lg:w-80 bg-surface-hover/50 flex flex-col items-center justify-center border-b lg:border-b-0 lg:border-r border-white/5 relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-full h-1.5 bg-purple-royal opacity-20" />
-                <div className="w-24 h-24 rounded-2xl bg-background border-2 border-white/10 flex items-center justify-center text-4xl font-black text-text-muted mb-4 group-hover:border-gold/30 transition-colors shadow-2xl relative z-10">
+                <div className="w-24 h-24 rounded-lg bg-background border-2 border-white/10 flex items-center justify-center text-4xl font-black text-text-muted mb-4 group-hover:border-gold/30 transition-colors shadow-2xl relative z-10">
                   {t.playerName.substring(0, 1).toUpperCase()}
                 </div>
                 <h3 className="text-2xl font-display font-black text-white text-center uppercase tracking-tight mb-1 relative z-10">
@@ -293,7 +293,7 @@ export default function Tryouts() {
                     <FileText size={12} /> Combat Dossier
                   </div>
                   <div className="grid grid-cols-2 gap-4 mb-6">
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/5">
                       <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">
                         Rank Profile
                       </p>
@@ -301,7 +301,7 @@ export default function Tryouts() {
                         {t.currentRank}
                       </p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/5">
                       <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">
                         Peak Combat
                       </p>
@@ -309,7 +309,7 @@ export default function Tryouts() {
                         {t.highestRank}
                       </p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/5">
                       <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">
                         Primary Spec
                       </p>
@@ -317,7 +317,7 @@ export default function Tryouts() {
                         {t.mainRole}
                       </p>
                     </div>
-                    <div className="p-3 rounded-xl bg-white/5 border border-white/5">
+                    <div className="p-3 rounded-lg bg-white/5 border border-white/5">
                       <p className="text-[9px] font-black text-text-muted uppercase tracking-widest mb-1">
                         Combat Focus
                       </p>
@@ -350,7 +350,7 @@ export default function Tryouts() {
                   </div>
 
                   <div className="space-y-4 flex-1">
-                    <div className="p-4 rounded-2xl bg-white/5 border border-white/5 h-32 overflow-y-auto">
+                    <div className="p-4 rounded-lg bg-white/5 border border-white/5 h-32 overflow-y-auto">
                       <p className="text-[10px] font-black text-purple-light uppercase tracking-widest mb-2 italic">
                         Why join the front lines?
                       </p>
@@ -411,7 +411,7 @@ export default function Tryouts() {
         ))}
 
         {displayList.length === 0 && (
-          <div className="text-center py-24 bg-white/5 border border-dashed border-white/10 rounded-3xl flex flex-col items-center">
+          <div className="text-center py-24 bg-white/5 border border-dashed border-white/10 rounded-lg flex flex-col items-center">
             <FileText
               size={64}
               className="mb-6 text-text-muted opacity-20"

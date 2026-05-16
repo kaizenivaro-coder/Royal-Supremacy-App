@@ -1,4 +1,4 @@
-import type { Member, ScheduleEvent } from "../types";
+import type { Member } from "../types";
 
 export type MemberFilters = {
   query?: string;
@@ -8,14 +8,10 @@ export type MemberFilters = {
 };
 
 const ALL = "All";
-const ADMIN_TABS = new Set(["general", "members", "matches", "announcements"]);
+const ADMIN_TABS = new Set(["general", "members", "announcements"]);
 
 function normalize(value: string | undefined) {
   return (value || "").trim().toLowerCase();
-}
-
-function eventDateTime(event: ScheduleEvent) {
-  return new Date(`${event.date}T${event.time || "00:00"}:00`).getTime();
 }
 
 export function filterMembers(members: Member[], filters: MemberFilters = {}) {
@@ -56,17 +52,6 @@ export function uniqueMemberValues(
   return Array.from(
     new Set(members.flatMap((member) => selector(member)).filter(Boolean)),
   ).sort((a, b) => a.localeCompare(b));
-}
-
-export function getNextScheduledEvent(
-  schedule: ScheduleEvent[],
-  now = new Date(),
-) {
-  const currentTime = now.getTime();
-
-  return [...schedule]
-    .filter((event) => eventDateTime(event) >= currentTime)
-    .sort((a, b) => eventDateTime(a) - eventDateTime(b))[0];
 }
 
 export function getAdminTabFromSearch(search: string) {

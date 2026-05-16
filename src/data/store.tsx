@@ -1,22 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from "react";
-import {
-  Member,
-  Team,
-  ScheduleEvent,
-  Match,
-  PointTransaction,
-  Announcement,
-  Tryout,
-} from "../types";
-import {
-  mockMembers,
-  mockTeams,
-  mockSchedule,
-  mockMatches,
-  mockPoints,
-  mockAnnouncements,
-  mockTryouts,
-} from "./mock";
+import React, { createContext, useContext, useState } from "react";
+import type { Announcement, Member, Notification, Tryout } from "../types";
+import { mockAnnouncements, mockMembers, mockTryouts } from "./mock";
 import {
   AuthUser,
   changeAccountPassword,
@@ -25,15 +9,18 @@ import {
   LocalAuthAccount,
   verifyLocalCredentials,
 } from "../lib/localAuth";
+import {
+  DEFAULT_TEAM,
+  MVP_STORAGE_VERSION,
+  assignMemberTeam as assignMemberTeamData,
+  createOnlineNotification,
+} from "../lib/mvpApp";
 
 interface AppState {
   members: Member[];
-  teams: Team[];
-  schedule: ScheduleEvent[];
-  matches: Match[];
-  points: PointTransaction[];
   announcements: Announcement[];
   tryouts: Tryout[];
+  notifications: Notification[];
   isAdmin: boolean;
   authUser: AuthUser | null;
 }
@@ -43,133 +30,180 @@ interface AuthActionResult {
   error?: string;
 }
 
+interface AssignTeamResult {
+  ok: boolean;
+  error?: string;
+}
+
 interface AppContextType extends AppState {
-  setMembers: (m: Member[]) => void;
-  setTeams: (t: Team[]) => void;
-  setSchedule: (s: ScheduleEvent[]) => void;
-  setMatches: (m: Match[]) => void;
-  setPoints: (p: PointTransaction[]) => void;
-  setAnnouncements: (a: Announcement[]) => void;
-  setTryouts: (t: Tryout[]) => void;
+  setMembers: (members: Member[]) => void;
+  setAnnouncements: (announcements: Announcement[]) => void;
+  setTryouts: (tryouts: Tryout[]) => void;
+  setNotifications: (notifications: Notification[]) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
   connectEmail: (email: string) => Promise<AuthActionResult>;
   changePassword: (password: string) => Promise<AuthActionResult>;
+  notifyTeamOnline: () => Notification;
+  assignMemberTeam: (memberId: string, teamName: string) => AssignTeamResult;
   logout: () => void;
   resetData: () => void;
 }
 
 const defaultState: AppState = {
   members: mockMembers,
-  teams: mockTeams,
-  schedule: mockSchedule,
-  matches: mockMatches,
-  points: mockPoints,
   announcements: mockAnnouncements,
   tryouts: mockTryouts,
+  notifications: [],
   isAdmin: false,
   authUser: null,
 };
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
-const persistedDataKeys = [
+
+const activeDataKeys = [
   "members",
-  "teams",
-  "schedule",
-  "matches",
-  "points",
   "announcements",
   "tryouts",
+  "notifications",
   "isAdmin",
 ];
 
-export function AppProvider({ children }: { children: React.ReactNode }) {
-  const loadData = <T,>(key: string, _default: T): T => {
-    try {
-      const data = localStorage.getItem(`royal_supremacy_${key}`);
-      return data ? JSON.parse(data) : _default;
-    } catch {
-      return _default;
-    }
-  };
+const retiredDataKeys = ["teams", "schedule", "matches", "points"];
 
-  const [members, setMembersState] = useState<Member[]>(
-    loadData("members", defaultState.members),
-  );
-  const [teams, setTeamsState] = useState<Team[]>(
-    loadData("teams", defaultState.teams),
-  );
-  const [schedule, setScheduleState] = useState<ScheduleEvent[]>(
-    loadData("schedule", defaultState.schedule),
-  );
-  const [matches, setMatchesState] = useState<Match[]>(
-    loadData("matches", defaultState.matches),
-  );
-  const [points, setPointsState] = useState<PointTransaction[]>(
-    loadData("points", defaultState.points),
-  );
-  const [announcements, setAnnouncementsState] = useState<Announcement[]>(
-    loadData("announcements", defaultState.announcements),
-  );
-  const [tryouts, setTryoutsState] = useState<Tryout[]>(
-    loadData("tryouts", defaultState.tryouts),
-  );
-  const [isAdmin, setIsAdminState] = useState<boolean>(
-    loadData("isAdmin", defaultState.isAdmin),
-  );
+function storageKey(key: string) {
+  return `royal_supremacy_${key}`;
+}
+
+function readStorage<T>(key: string, fallback: T): T {
+  try {
+    const data = localStorage.getItem(storageKey(key));
+    return data ? JSON.parse(data) : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+function writeStorage<T>(key: string, value: T) {
+  localStorage.setItem(storageKey(key), JSON.stringify(value));
+}
+
+function createMemberForAuthUser(user: AuthUser): Member {
+  return {
+    ...mockMembers[0],
+    id: `member_${user.id}`,
+    username: user.username,
+    authUserId: user.id,
+    playerName: user.username === "kingchoou" ? "King Choou" : user.username,
+    team: DEFAULT_TEAM,
+    bannerId: "chou-stun",
+  };
+}
+
+function getInitialMembers(authUser: AuthUser | null): Member[] {
+  if (!authUser) {
+    return defaultState.members;
+  }
+
+  return [createMemberForAuthUser(authUser)];
+}
+
+function runMvpMigration() {
+  try {
+    if (localStorage.getItem(storageKey("schema_version")) === MVP_STORAGE_VERSION) {
+      return;
+    }
+
+    const authUser = readStorage<AuthUser | null>("auth_session", null);
+    retiredDataKeys.forEach((key) => localStorage.removeItem(storageKey(key)));
+    localStorage.removeItem(storageKey("isAdmin"));
+    writeStorage("members", getInitialMembers(authUser));
+    writeStorage("notifications", []);
+    writeStorage("schema_version", MVP_STORAGE_VERSION);
+  } catch {
+    // Local storage can be unavailable in private contexts; the in-memory defaults still work.
+  }
+}
+
+export function AppProvider({ children }: { children: React.ReactNode }) {
+  runMvpMigration();
+
   const [authAccounts, setAuthAccountsState] = useState<LocalAuthAccount[]>(
-    loadData("auth_accounts", []),
+    readStorage("auth_accounts", []),
   );
   const [authUser, setAuthUserState] = useState<AuthUser | null>(
-    loadData("auth_session", defaultState.authUser),
+    readStorage("auth_session", defaultState.authUser),
+  );
+  const [members, setMembersState] = useState<Member[]>(
+    readStorage("members", getInitialMembers(authUser)),
+  );
+  const [announcements, setAnnouncementsState] = useState<Announcement[]>(
+    readStorage("announcements", defaultState.announcements),
+  );
+  const [tryouts, setTryoutsState] = useState<Tryout[]>(
+    readStorage("tryouts", defaultState.tryouts),
+  );
+  const [notifications, setNotificationsState] = useState<Notification[]>(
+    readStorage("notifications", defaultState.notifications),
+  );
+  const [isAdmin, setIsAdminState] = useState<boolean>(
+    readStorage("isAdmin", defaultState.isAdmin),
   );
 
-  const setMembers = (m: Member[]) => {
-    setMembersState(m);
-    localStorage.setItem("royal_supremacy_members", JSON.stringify(m));
+  const setMembers = (nextMembers: Member[]) => {
+    setMembersState(nextMembers);
+    writeStorage("members", nextMembers);
   };
-  const setTeams = (t: Team[]) => {
-    setTeamsState(t);
-    localStorage.setItem("royal_supremacy_teams", JSON.stringify(t));
+
+  const setAnnouncements = (nextAnnouncements: Announcement[]) => {
+    setAnnouncementsState(nextAnnouncements);
+    writeStorage("announcements", nextAnnouncements);
   };
-  const setSchedule = (s: ScheduleEvent[]) => {
-    setScheduleState(s);
-    localStorage.setItem("royal_supremacy_schedule", JSON.stringify(s));
+
+  const setTryouts = (nextTryouts: Tryout[]) => {
+    setTryoutsState(nextTryouts);
+    writeStorage("tryouts", nextTryouts);
   };
-  const setMatches = (m: Match[]) => {
-    setMatchesState(m);
-    localStorage.setItem("royal_supremacy_matches", JSON.stringify(m));
+
+  const setNotifications = (nextNotifications: Notification[]) => {
+    setNotificationsState(nextNotifications);
+    writeStorage("notifications", nextNotifications);
   };
-  const setPoints = (p: PointTransaction[]) => {
-    setPointsState(p);
-    localStorage.setItem("royal_supremacy_points", JSON.stringify(p));
-  };
-  const setAnnouncements = (a: Announcement[]) => {
-    setAnnouncementsState(a);
-    localStorage.setItem("royal_supremacy_announcements", JSON.stringify(a));
-  };
-  const setTryouts = (t: Tryout[]) => {
-    setTryoutsState(t);
-    localStorage.setItem("royal_supremacy_tryouts", JSON.stringify(t));
-  };
-  const setIsAdmin = (a: boolean) => {
-    setIsAdminState(a);
-    localStorage.setItem("royal_supremacy_isAdmin", JSON.stringify(a));
+
+  const setIsAdmin = (nextIsAdmin: boolean) => {
+    setIsAdminState(nextIsAdmin);
+    writeStorage("isAdmin", nextIsAdmin);
   };
 
   const persistAuthAccounts = (accounts: LocalAuthAccount[]) => {
     setAuthAccountsState(accounts);
-    localStorage.setItem("royal_supremacy_auth_accounts", JSON.stringify(accounts));
+    writeStorage("auth_accounts", accounts);
   };
 
   const setAuthSession = (user: AuthUser | null) => {
     setAuthUserState(user);
     if (user) {
-      localStorage.setItem("royal_supremacy_auth_session", JSON.stringify(user));
+      writeStorage("auth_session", user);
     } else {
-      localStorage.removeItem("royal_supremacy_auth_session");
+      localStorage.removeItem(storageKey("auth_session"));
     }
+  };
+
+  const ensureMemberForUser = (user: AuthUser) => {
+    setMembersState((currentMembers) => {
+      if (
+        currentMembers.some(
+          (member) => member.authUserId === user.id || member.username === user.username,
+        )
+      ) {
+        return currentMembers;
+      }
+
+      const nextMembers = [...currentMembers, createMemberForAuthUser(user)];
+      writeStorage("members", nextMembers);
+      return nextMembers;
+    });
   };
 
   const signup = async (identifier: string, password: string) => {
@@ -180,6 +214,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     persistAuthAccounts(result.accounts);
     setAuthSession(result.user);
+    ensureMemberForUser(result.user);
     return { ok: true };
   };
 
@@ -190,6 +225,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     setAuthSession(result.user);
+    ensureMemberForUser(result.user);
     return { ok: true };
   };
 
@@ -223,48 +259,63 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { ok: true };
   };
 
+  const notifyTeamOnline = () => {
+    const notification = createOnlineNotification(authUser?.username ?? "kingchoou");
+    setNotifications([notification, ...notifications].slice(0, 10));
+    return notification;
+  };
+
+  const assignMemberTeam = (memberId: string, teamName: string) => {
+    const result = assignMemberTeamData(members, memberId, teamName, isAdmin);
+    if (result.ok) {
+      setMembers(result.members);
+    }
+
+    return { ok: result.ok, error: result.error };
+  };
+
   const logout = () => {
     setAuthSession(null);
+    setIsAdmin(false);
   };
 
   const resetData = () => {
-    persistedDataKeys.forEach((key) => {
-      localStorage.removeItem(`royal_supremacy_${key}`);
+    [...activeDataKeys, ...retiredDataKeys].forEach((key) => {
+      localStorage.removeItem(storageKey(key));
     });
-    setMembersState(defaultState.members);
-    setTeamsState(defaultState.teams);
-    setScheduleState(defaultState.schedule);
-    setMatchesState(defaultState.matches);
-    setPointsState(defaultState.points);
+    writeStorage("schema_version", MVP_STORAGE_VERSION);
+    const nextMembers = getInitialMembers(authUser);
+    setMembersState(nextMembers);
     setAnnouncementsState(defaultState.announcements);
     setTryoutsState(defaultState.tryouts);
+    setNotificationsState(defaultState.notifications);
     setIsAdminState(defaultState.isAdmin);
+    writeStorage("members", nextMembers);
+    writeStorage("announcements", defaultState.announcements);
+    writeStorage("tryouts", defaultState.tryouts);
+    writeStorage("notifications", defaultState.notifications);
   };
 
   return (
     <AppContext.Provider
       value={{
         members,
-        teams,
-        schedule,
-        matches,
-        points,
         announcements,
         tryouts,
+        notifications,
         isAdmin,
         authUser,
         setMembers,
-        setTeams,
-        setSchedule,
-        setMatches,
-        setPoints,
         setAnnouncements,
         setTryouts,
+        setNotifications,
         setIsAdmin,
         login,
         signup,
         connectEmail,
         changePassword,
+        notifyTeamOnline,
+        assignMemberTeam,
         logout,
         resetData,
       }}

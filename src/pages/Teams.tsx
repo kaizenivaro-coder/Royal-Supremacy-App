@@ -1,142 +1,140 @@
+import { useMemo, useState } from "react";
+import { Shield, UserCircle, Users, X } from "lucide-react";
 import { useAppStore } from "../data/store";
-import { Card, PageHeader, Badge } from "../components/ui";
-import { Users, Shield, Star, Swords } from "lucide-react";
-import { cn } from "../lib/utils";
-
-const MLBB_ROLES = ["Gold Lane", "EXP Lane", "Mid Lane", "Jungle", "Roam"];
+import { Badge, Card, PageHeader } from "../components/ui";
+import { TEAM_GROUPS, groupMembersByTeam } from "../lib/mvpApp";
+import type { Member } from "../types";
 
 export default function Teams() {
-  const { teams, members } = useAppStore();
-
-  const getMemberDetails = (id: string) => members.find((m) => m.id === id);
+  const { members } = useAppStore();
+  const [selectedMember, setSelectedMember] = useState<Member | null>(null);
+  const groupedMembers = useMemo(() => groupMembersByTeam(members), [members]);
 
   return (
     <div className="space-y-8 pb-10 text-left">
       <PageHeader
-        title="Squad Divisions"
-        description="The elite tactical units of the Royal Supremacy hierarchy."
+        title="Teams"
+        description="One roster, five MVP groups. Admin Portal controls assignments."
       />
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {teams.map((team) => (
-          <Card
-            key={team.id}
-            className="flex flex-col relative overflow-hidden group p-0 border-white/5 hover:border-gold/30 transition-all duration-500"
-          >
-            {/* Team Banner / Header */}
-            <div className="relative h-32 overflow-hidden bg-surface-hover">
-               <div className={cn(
-                 "absolute inset-0 bg-gradient-to-br transition-opacity duration-500",
-                 team.name.includes("Sovereign") 
-                  ? "from-gold/20 via-background to-background opacity-60 group-hover:opacity-80" 
-                  : "from-purple-royal/20 via-surface to-background opacity-60 group-hover:opacity-80"
-               )} />
-               
-               <div className="absolute inset-0 p-8 flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <h2 className="text-3xl font-display font-black text-white tracking-widest uppercase leading-none mb-2">
-                       {team.name}
-                    </h2>
-                    <Badge variant={team.name.includes("Sovereign") ? "gold" : "purple"}>
-                      {team.type}
-                    </Badge>
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
+        {TEAM_GROUPS.map((team) => {
+          const teamMembers = groupedMembers[team];
+
+          return (
+            <Card key={team} className="flex min-h-64 flex-col p-5">
+              <div className="mb-4 flex items-start justify-between gap-3">
+                <div>
+                  <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg border border-gold/25 bg-gold/10 text-gold">
+                    <Shield size={18} />
                   </div>
-                  <Shield size={48} className={cn(
-                    "opacity-20 group-hover:opacity-40 transition-all transform group-hover:scale-110",
-                    team.name.includes("Sovereign") ? "text-gold" : "text-purple-royal"
-                  )} />
-               </div>
-            </div>
-
-            <div className="p-6 space-y-6">
-              <p className="text-text-muted text-sm font-medium italic border-l-2 border-gold/40 pl-4 py-1">
-                "{team.notes}"
-              </p>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5 relative overflow-hidden group/cap">
-                   <div className="absolute top-0 left-0 w-1 h-full bg-gold opacity-0 group-hover/cap:opacity-100 transition-opacity" />
-                   <div className="flex items-center gap-3 text-[10px] font-black text-text-muted uppercase tracking-widest mb-1.5">
-                      <Star size={12} className="text-gold" />
-                      Division Captain
-                   </div>
-                   <div className="font-black text-white uppercase text-lg group-hover/cap:text-gold transition-colors">{team.captain}</div>
+                  <h2 className="text-base font-black uppercase leading-tight text-white">
+                    {team}
+                  </h2>
                 </div>
-                <div className="p-4 rounded-xl bg-white/5 border border-white/5">
-                   <div className="flex items-center gap-3 text-[10px] font-black text-text-muted uppercase tracking-widest mb-1.5">
-                      <Users size={12} className="text-purple-light" />
-                      Operational Size
-                   </div>
-                   <div className="font-black text-white uppercase text-lg">{team.members.length} / 6 Operators</div>
-                </div>
+                <Badge variant={team === "Unassigned" ? "gold" : "purple"}>
+                  {teamMembers.length}
+                </Badge>
               </div>
 
-              <div className="space-y-4">
-                <div className="flex items-center gap-2 text-[10px] font-black text-white uppercase tracking-[0.3em]">
-                  <Swords size={12} className="text-gold" />
-                  Tactical Roster
-                </div>
-                
-                <div className="grid gap-2">
-                  {MLBB_ROLES.map((role) => {
-                    const memberWithRole = team.members
-                      .map(id => getMemberDetails(id))
-                      .find(m => m?.mainRole === role);
-                    
-                    return (
-                      <div 
-                        key={role}
-                        className={cn(
-                          "flex items-center justify-between p-3 rounded-xl border border-white/5 transition-all text-left",
-                          memberWithRole ? "bg-white/5" : "bg-transparent border-dashed border-white/10 opacity-40 shrink-0"
-                        )}
-                      >
-                        <div className="flex items-center gap-4">
-                          <div className={cn(
-                            "w-8 h-8 rounded-lg flex items-center justify-center text-[10px] font-black uppercase tracking-tighter shrink-0",
-                            memberWithRole ? "bg-purple-royal/20 text-gold" : "bg-white/5 text-text-muted"
-                          )}>
-                             {role.substring(0, 2)}
-                          </div>
-                          <div>
-                            <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-0.5">{role}</div>
-                            <div className="text-sm font-black text-white uppercase tracking-tight">
-                              {memberWithRole ? memberWithRole.playerName : "VACANT"}
-                            </div>
-                          </div>
-                        </div>
-                        {memberWithRole && (
-                          <div className="text-right">
-                            <div className="text-[10px] font-black text-gold uppercase tracking-widest">{memberWithRole.currentRank}</div>
-                            <div className="text-[10px] font-bold text-text-muted uppercase tracking-widest">RANK</div>
-                          </div>
-                        )}
+              <div className="mt-auto space-y-2">
+                {teamMembers.length > 0 ? (
+                  teamMembers.map((member) => (
+                    <button
+                      key={member.id}
+                      type="button"
+                      onClick={() => setSelectedMember(member)}
+                      className="flex w-full items-center gap-3 rounded-lg border border-blue-200/10 bg-background/45 p-3 text-left transition hover:border-gold/30 hover:bg-surface-hover"
+                    >
+                      <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-blue-200/10 bg-surface text-xs font-black uppercase text-gold">
+                        {member.username.slice(0, 1)}
                       </div>
-                    );
-                  })}
-                </div>
-
-                {/* Bench / Substitutes */}
-                {team.members.length > 5 && (
-                  <div className="pt-4 mt-4 border-t border-white/5">
-                    <div className="text-[10px] font-black text-text-muted uppercase tracking-widest mb-3">Substitutes</div>
-                    <div className="flex flex-wrap gap-2">
-                      {team.members
-                        .map(id => getMemberDetails(id))
-                        .filter(m => m && !MLBB_ROLES.includes(m.mainRole))
-                        .map(m => m && (
-                          <Badge key={m.id} variant="purple" className="py-1.5 px-3">
-                             {m.playerName} ({m.mainRole})
-                          </Badge>
-                        ))}
-                    </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-black text-white">
+                          {member.playerName}
+                        </p>
+                        <p className="truncate text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                          @{member.username} / {member.mainRole}
+                        </p>
+                      </div>
+                    </button>
+                  ))
+                ) : (
+                  <div className="rounded-lg border border-dashed border-blue-200/10 bg-background/35 p-4 text-center">
+                    <Users className="mx-auto mb-2 h-5 w-5 text-text-muted/50" />
+                    <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                      No members assigned
+                    </p>
                   </div>
                 )}
               </div>
-            </div>
-          </Card>
-        ))}
+            </Card>
+          );
+        })}
       </div>
+
+      {selectedMember && (
+        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/75 p-4">
+          <div className="w-full max-w-md rounded-lg border border-gold/20 bg-surface p-6 shadow-2xl">
+            <div className="mb-5 flex items-start justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-lg border border-gold/30 bg-gold/10 text-gold">
+                  <UserCircle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-xl font-black uppercase text-white">
+                    {selectedMember.playerName}
+                  </h3>
+                  <p className="text-xs font-bold text-gold">@{selectedMember.username}</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="grid h-9 w-9 place-items-center rounded-lg border border-blue-200/10 text-text-muted transition hover:border-gold/30 hover:text-white"
+                aria-label="Close player details"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {[
+                ["Team", selectedMember.team],
+                ["Status", selectedMember.status],
+                ["Current Rank", selectedMember.currentRank],
+                ["Highest Rank", selectedMember.highestRank],
+                ["MLBB ID", selectedMember.mlbbId],
+                ["Server", selectedMember.serverId],
+                ["Primary Role", selectedMember.mainRole],
+                ["Secondary Role", selectedMember.secondaryRole],
+              ].map(([label, value]) => (
+                <div key={label} className="rounded-lg border border-blue-200/10 bg-background/50 p-3">
+                  <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
+                    {label}
+                  </p>
+                  <p className="mt-1 truncate text-sm font-black text-white">
+                    {value}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-4 rounded-lg border border-blue-200/10 bg-background/50 p-3">
+              <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
+                Signature Heroes
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {selectedMember.mainHeroes.map((hero) => (
+                  <Badge key={hero} variant="purple">
+                    {hero}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
