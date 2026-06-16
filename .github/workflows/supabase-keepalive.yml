@@ -11,8 +11,8 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
-      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+      SUPABASE_URL: "https://sjzmuegqldknoxddvzda.supabase.co"
+      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_jOGdQdaFEWNusmR9AM2btA_Vm8qomJX"
 
     steps:
       - name: Validate Supabase configuration

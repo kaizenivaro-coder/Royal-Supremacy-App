@@ -42,10 +42,14 @@ them before sharing the app broadly.
 
 ### GitHub Pages Supabase Setup
 
-GitHub Pages builds read Supabase config from repository settings:
+GitHub Pages builds use the public Supabase project URL and publishable key in
+`.github/workflows/deploy-pages.yml`. These values are client-side public values;
+never put a Supabase service role key or direct database password in the frontend
+or GitHub Actions build environment.
 
-- Repository variable: `VITE_SUPABASE_URL`
-- Repository secret: `VITE_SUPABASE_PUBLISHABLE_KEY`
+If the Supabase publishable key is rotated later, update the workflow value and
+redeploy. A stricter production setup can move these values back into GitHub
+repository variables/secrets.
 
 The free-tier keepalive workflow in `.github/workflows/supabase-keepalive.yml`
 runs every Monday and Thursday at 06:00 UTC, and can also be run manually from
