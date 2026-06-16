@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import {
   Activity,
+  ArrowLeft,
   Bell,
   Megaphone,
   Shield,
@@ -8,19 +9,21 @@ import {
   UserCircle,
   UserPlus,
   Users,
-  X,
 } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useAppStore } from "../data/store";
 import { Badge, Button, Card } from "../components/ui";
 import {
+  getActiveMembers,
   getLatestAnnouncements,
   getProfileBanner,
-  TEAM_GROUPS,
   groupMembersByTeam,
 } from "../lib/mvpApp";
+import type { Announcement, Member, Notification } from "../types";
 
-type QuickPanel = "announcements" | "teams" | "tryouts" | "profile" | "notify";
+export type QuickPanel = "announcements" | "teams" | "tryouts" | "profile" | "notify";
+
+const QUICK_PANEL_TRANSITION_MS = 200;
 
 const quickActions = [
   { id: "announcements", label: "Announcements", icon: Megaphone },
@@ -35,6 +38,219 @@ const analyticsCards = [
   { label: "Activity", value: "Local MVP", icon: Activity },
 ];
 
+type DashboardQuickActionDialogProps = {
+  panel: QuickPanel | null;
+  isVisible: boolean;
+  latestAnnouncements: Announcement[];
+  teamGroups: ReturnType<typeof groupMembersByTeam>;
+  pendingTryoutsCount: number;
+  currentMember: Member | undefined;
+  authUsername: string | undefined;
+  notifications: Notification[];
+  teamNames: string[];
+  onClose: () => void;
+};
+
+const quickPanelCopy: Record<QuickPanel, { title: string; description: string }> = {
+  announcements: {
+    title: "Announcements",
+    description: "Latest squad updates from the command feed.",
+  },
+  teams: {
+    title: "Teams",
+    description: "Current MVP roster groups and assignment counts.",
+  },
+  tryouts: {
+    title: "Tryouts",
+    description: "Pending player files that need review.",
+  },
+  profile: {
+    title: "Profile",
+    description: "Your account identity, banner, roles, and heroes.",
+  },
+  notify: {
+    title: "Team Notified",
+    description: "Your local squad activity update has been created.",
+  },
+};
+
+export function DashboardQuickActionDialog({
+  panel,
+  isVisible,
+  latestAnnouncements,
+  teamGroups,
+  pendingTryoutsCount,
+  currentMember,
+  authUsername,
+  notifications,
+  teamNames,
+  onClose,
+}: DashboardQuickActionDialogProps) {
+  if (!panel) return null;
+
+  const panelCopy = quickPanelCopy[panel];
+
+  return (
+    <div
+      className={`fixed inset-0 z-[80] flex items-center justify-center bg-black/72 px-3 py-5 backdrop-blur-sm transition-opacity duration-200 ease-in-out ${
+        isVisible ? "opacity-100" : "opacity-0"
+      }`}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${panelCopy.title} quick action`}
+      data-background-scroll-lock="enabled"
+    >
+      <div
+        className={`flex h-[82vh] w-[calc(100vw-1rem)] max-w-3xl flex-col overflow-hidden rounded-lg border border-blue-200/20 bg-surface shadow-[0_28px_90px_rgba(0,0,0,0.52),0_0_0_1px_rgba(242,196,83,0.06)] transition-all duration-200 ease-in-out md:h-[72vh] ${
+          isVisible ? "translate-y-0 scale-100 opacity-100" : "translate-y-3 scale-95 opacity-0"
+        }`}
+      >
+        <div className="flex shrink-0 items-center gap-3 border-b border-white/10 px-4 py-4 md:px-5">
+          <button
+            type="button"
+            onClick={onClose}
+            className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-gold/60"
+            aria-label="Close quick action panel"
+          >
+            <ArrowLeft size={24} />
+          </button>
+          <div className="min-w-0">
+            <h3 className="font-display text-xl font-black uppercase tracking-widest text-gold">
+              {panelCopy.title}
+            </h3>
+            <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-text-muted">
+              {panelCopy.description}
+            </p>
+          </div>
+        </div>
+
+        <div className="min-h-0 flex-1 overflow-y-auto p-4 md:p-5">
+          {panel === "announcements" && (
+            <div className="space-y-3">
+              {latestAnnouncements.length > 0 ? (
+                latestAnnouncements.map((announcement) => (
+                  <article
+                    key={announcement.id}
+                    className="rounded-lg border border-blue-200/10 bg-background/50 p-4 transition hover:border-gold/25 hover:bg-background/65"
+                  >
+                    <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                      <Badge
+                        variant={
+                          announcement.priority === "Urgent"
+                            ? "danger"
+                            : announcement.priority === "Important"
+                              ? "gold"
+                              : "default"
+                        }
+                      >
+                        {announcement.priority}
+                      </Badge>
+                      <span className="text-[10px] font-bold uppercase tracking-widest text-text-muted">
+                        {announcement.date}
+                      </span>
+                    </div>
+                    <h4 className="font-black uppercase text-white">
+                      {announcement.title}
+                    </h4>
+                    <p className="mt-2 text-sm font-medium leading-6 text-text-muted">
+                      {announcement.message}
+                    </p>
+                  </article>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-blue-200/15 bg-background/35 p-8 text-center text-sm font-semibold text-text-muted">
+                  No announcements are live yet.
+                </div>
+              )}
+              <Link to="/announcements" onClick={onClose}>
+                <Button variant="gold" className="mt-3 w-full">
+                  Open Announcements
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {panel === "teams" && (
+            <div className="space-y-3">
+              {teamNames.map((team) => (
+                <div
+                  key={team}
+                  className="flex items-center justify-between rounded-lg border border-blue-200/10 bg-background/50 p-4 transition hover:border-gold/25 hover:bg-background/65"
+                >
+                  <span className="min-w-0 truncate text-sm font-black uppercase text-white">
+                    {team}
+                  </span>
+                  <Badge variant={team === "Unassigned" ? "gold" : "default"}>
+                    {(teamGroups[team] ?? []).length}
+                  </Badge>
+                </div>
+              ))}
+              <Link to="/teams" onClick={onClose}>
+                <Button variant="gold" className="mt-3 w-full">
+                  Open Teams
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {panel === "tryouts" && (
+            <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                Active Tryout Files
+              </p>
+              <p className="mt-3 text-5xl font-black text-white">
+                {pendingTryoutsCount}
+              </p>
+              <p className="mt-3 text-sm font-medium leading-6 text-text-muted">
+                These are the current MVP tryout records waiting on review,
+                trial, or test-match decisions.
+              </p>
+              <Link to="/tryouts" onClick={onClose}>
+                <Button variant="gold" className="mt-5 w-full">
+                  Open Tryouts
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {panel === "profile" && (
+            <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
+              <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                Signed in as
+              </p>
+              <p className="mt-3 text-3xl font-black text-gold">
+                @{currentMember?.username ?? authUsername ?? "kingchoou"}
+              </p>
+              <p className="mt-3 text-sm font-medium leading-6 text-text-muted">
+                Banner, email, password, MLBB ID, roles, and main heroes live in
+                your profile settings.
+              </p>
+              <Link to="/profile" onClick={onClose}>
+                <Button variant="gold" className="mt-5 w-full">
+                  Open Profile
+                </Button>
+              </Link>
+            </div>
+          )}
+
+          {panel === "notify" && (
+            <div className="rounded-lg border border-gold/20 bg-background/50 p-5">
+              <p className="text-lg font-black text-white">
+                {notifications[0]?.message ??
+                  `${currentMember?.username ?? "kingchoou"} is going online`}
+              </p>
+              <p className="mt-3 text-sm font-medium leading-6 text-text-muted">
+                This is a local in-app notification for the MVP. Later it can
+                become a Supabase realtime or push notification.
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const {
     members,
@@ -42,9 +258,12 @@ export default function Dashboard() {
     tryouts,
     notifications,
     authUser,
+    teams,
     notifyTeamOnline,
   } = useAppStore();
   const [activePanel, setActivePanel] = useState<QuickPanel | null>(null);
+  const [renderedPanel, setRenderedPanel] = useState<QuickPanel | null>(null);
+  const [isPanelVisible, setIsPanelVisible] = useState(false);
 
   const currentMember =
     members.find((member) => member.username === authUser?.username) ?? members[0];
@@ -52,7 +271,19 @@ export default function Dashboard() {
     () => getLatestAnnouncements(announcements),
     [announcements],
   );
-  const teamGroups = useMemo(() => groupMembersByTeam(members), [members]);
+  const activeMembers = useMemo(() => getActiveMembers(members), [members]);
+  const activeTeams = useMemo(
+    () => teams.filter((team) => !team.archivedAt),
+    [teams],
+  );
+  const teamGroups = useMemo(
+    () => groupMembersByTeam(activeMembers, activeTeams),
+    [activeMembers, activeTeams],
+  );
+  const teamNames = useMemo(
+    () => activeTeams.map((team) => team.name),
+    [activeTeams],
+  );
   const pendingTryoutsCount = tryouts.filter((tryout) =>
     ["Pending", "Trial", "Needs Test Match"].includes(tryout.status),
   ).length;
@@ -64,6 +295,65 @@ export default function Dashboard() {
     }
     setActivePanel(panel);
   };
+
+  const closePanel = () => setActivePanel(null);
+
+  useEffect(() => {
+    if (activePanel) {
+      setRenderedPanel(activePanel);
+      const animationFrame = window.requestAnimationFrame(() => {
+        setIsPanelVisible(true);
+      });
+
+      return () => window.cancelAnimationFrame(animationFrame);
+    }
+
+    setIsPanelVisible(false);
+    const timeout = window.setTimeout(() => {
+      setRenderedPanel(null);
+    }, QUICK_PANEL_TRANSITION_MS);
+
+    return () => window.clearTimeout(timeout);
+  }, [activePanel]);
+
+  useEffect(() => {
+    if (!renderedPanel) return undefined;
+
+    const scrollY = window.scrollY;
+    const previousDocumentOverflow = document.documentElement.style.overflow;
+    const previousOverflow = document.body.style.overflow;
+    const previousPosition = document.body.style.position;
+    const previousTop = document.body.style.top;
+    const previousLeft = document.body.style.left;
+    const previousRight = document.body.style.right;
+    const previousWidth = document.body.style.width;
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        closePanel();
+      }
+    };
+
+    document.documentElement.style.overflow = "hidden";
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
+    document.body.style.width = "100%";
+    window.addEventListener("keydown", handleKeyDown);
+
+    return () => {
+      document.documentElement.style.overflow = previousDocumentOverflow;
+      document.body.style.overflow = previousOverflow;
+      document.body.style.position = previousPosition;
+      document.body.style.top = previousTop;
+      document.body.style.left = previousLeft;
+      document.body.style.right = previousRight;
+      document.body.style.width = previousWidth;
+      window.removeEventListener("keydown", handleKeyDown);
+      window.scrollTo(0, scrollY);
+    };
+  }, [renderedPanel]);
 
   return (
     <div className="space-y-8 pb-10 text-left">
@@ -238,113 +528,18 @@ export default function Dashboard() {
         </Card>
       </div>
 
-      {activePanel && (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/75 p-4">
-          <div className="max-h-[85vh] w-full max-w-lg overflow-y-auto rounded-lg border border-gold/20 bg-surface p-6 shadow-2xl">
-            <div className="mb-5 flex items-center justify-between gap-4">
-              <h3 className="font-display text-xl font-black uppercase text-white">
-                {activePanel === "notify" ? "Team Notified" : quickActions.find((item) => item.id === activePanel)?.label}
-              </h3>
-              <button
-                type="button"
-                onClick={() => setActivePanel(null)}
-                className="grid h-9 w-9 place-items-center rounded-lg border border-blue-200/10 text-text-muted transition hover:border-gold/30 hover:text-white"
-                aria-label="Close modal"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {activePanel === "announcements" && (
-              <div className="space-y-3">
-                {latestAnnouncements.map((announcement) => (
-                  <div key={announcement.id} className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
-                    <div className="mb-2 flex items-center justify-between gap-3">
-                      <Badge variant={announcement.priority === "Urgent" ? "danger" : announcement.priority === "Important" ? "gold" : "purple"}>
-                        {announcement.priority}
-                      </Badge>
-                      <span className="text-[10px] font-bold text-text-muted">{announcement.date}</span>
-                    </div>
-                    <h4 className="font-black uppercase text-white">{announcement.title}</h4>
-                    <p className="mt-2 text-sm font-medium leading-6 text-text-muted">
-                      {announcement.message}
-                    </p>
-                  </div>
-                ))}
-                <Link to="/announcements" onClick={() => setActivePanel(null)}>
-                  <Button variant="secondary" className="mt-3 w-full">
-                    Open Announcements
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {activePanel === "teams" && (
-              <div className="space-y-3">
-                {TEAM_GROUPS.map((team) => (
-                  <div key={team} className="flex items-center justify-between rounded-lg border border-blue-200/10 bg-background/50 p-4">
-                    <span className="text-sm font-black uppercase text-white">{team}</span>
-                    <Badge variant={team === "Unassigned" ? "gold" : "purple"}>
-                      {teamGroups[team].length}
-                    </Badge>
-                  </div>
-                ))}
-                <Link to="/teams" onClick={() => setActivePanel(null)}>
-                  <Button variant="secondary" className="mt-3 w-full">
-                    Open Teams
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {activePanel === "tryouts" && (
-              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  Active Tryout Files
-                </p>
-                <p className="mt-2 text-4xl font-black text-white">{pendingTryoutsCount}</p>
-                <Link to="/tryouts" onClick={() => setActivePanel(null)}>
-                  <Button variant="secondary" className="mt-5 w-full">
-                    Open Tryouts
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {activePanel === "profile" && (
-              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
-                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  Signed in as
-                </p>
-                <p className="mt-2 text-2xl font-black text-gold">
-                  @{currentMember?.username ?? authUser?.username}
-                </p>
-                <p className="mt-2 text-sm font-medium text-text-muted">
-                  Banner, email, password, MLBB ID, roles, and heroes live in your
-                  profile settings.
-                </p>
-                <Link to="/profile" onClick={() => setActivePanel(null)}>
-                  <Button variant="secondary" className="mt-5 w-full">
-                    Open Profile
-                  </Button>
-                </Link>
-              </div>
-            )}
-
-            {activePanel === "notify" && (
-              <div className="rounded-lg border border-gold/20 bg-background/50 p-5">
-                <p className="text-lg font-black text-white">
-                  {(notifications[0]?.message ?? `${currentMember?.username ?? "kingchoou"} is going online`)}
-                </p>
-                <p className="mt-2 text-sm font-medium leading-6 text-text-muted">
-                  This is a local in-app notification for the MVP. Later it can become
-                  a Supabase realtime or push notification.
-                </p>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+      <DashboardQuickActionDialog
+        panel={renderedPanel}
+        isVisible={isPanelVisible}
+        latestAnnouncements={latestAnnouncements}
+        teamGroups={teamGroups}
+        pendingTryoutsCount={pendingTryoutsCount}
+        currentMember={currentMember}
+        authUsername={authUser?.username}
+        notifications={notifications}
+        teamNames={teamNames}
+        onClose={closePanel}
+      />
     </div>
   );
 }

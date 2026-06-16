@@ -8,7 +8,13 @@ export type MemberFilters = {
 };
 
 const ALL = "All";
-const ADMIN_TABS = new Set(["general", "members", "announcements"]);
+const ADMIN_TABS = new Set([
+  "general",
+  "members",
+  "rank-command",
+  "leaderboard",
+  "announcements",
+]);
 
 function normalize(value: string | undefined) {
   return (value || "").trim().toLowerCase();

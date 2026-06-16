@@ -1,4 +1,13 @@
-import type { Announcement, Member, Notification, Tryout } from "../types";
+import type {
+  Announcement,
+  Member,
+  Notification,
+  RankHistory,
+  RpTransaction,
+  Season,
+  Team,
+  Tryout,
+} from "../types";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 export const SUPABASE_APP_STATE_ID = "royal-supremacy";
@@ -9,6 +18,10 @@ export type RemoteAppState = {
   tryouts: Tryout[];
   notifications: Notification[];
   squadLogoSrc: string;
+  seasons: Season[];
+  teams: Team[];
+  rpTransactions: RpTransaction[];
+  rankHistory: RankHistory[];
 };
 
 export function normalizeRemoteAppState(value: unknown): RemoteAppState | null {
@@ -27,6 +40,10 @@ export function normalizeRemoteAppState(value: unknown): RemoteAppState | null {
     tryouts: Array.isArray(data.tryouts) ? data.tryouts : [],
     notifications: Array.isArray(data.notifications) ? data.notifications : [],
     squadLogoSrc: typeof data.squadLogoSrc === "string" ? data.squadLogoSrc : "",
+    seasons: Array.isArray(data.seasons) ? data.seasons : [],
+    teams: Array.isArray(data.teams) ? data.teams : [],
+    rpTransactions: Array.isArray(data.rpTransactions) ? data.rpTransactions : [],
+    rankHistory: Array.isArray(data.rankHistory) ? data.rankHistory : [],
   };
 }
 

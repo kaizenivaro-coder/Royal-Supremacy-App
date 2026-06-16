@@ -1,6 +1,24 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from "react";
-import type { Announcement, Member, Notification, Tryout } from "../types";
+import type {
+  Announcement,
+  Member,
+  Notification,
+  RankHistory,
+  RankStatus,
+  RpSourceType,
+  RpTransaction,
+  Season,
+  Team,
+  Tryout,
+} from "../types";
 import { mockAnnouncements, mockMembers, mockTryouts } from "./mock";
+import {
+  ACTIVE_SEASON,
+  SEED_AUTH_CREDENTIALS,
+  createSeedMembers,
+  createSeedRankHistory,
+  createSeedRpTransactions,
+} from "./leaderboardSeed";
 import {
   AuthUser,
   changeAccountPassword,
@@ -8,16 +26,23 @@ import {
   createLocalAccount,
   ensureLocalAccount,
   LocalAuthAccount,
-  normalizeIdentifier,
   verifyLocalCredentials,
 } from "../lib/localAuth";
 import {
-  ADMIN_PORTAL_PASSWORD,
   DEFAULT_TEAM,
   MVP_STORAGE_VERSION,
+  archiveMember as archiveMemberData,
+  archiveTeam as archiveTeamData,
   assignMemberTeam as assignMemberTeamData,
+  createDefaultTeams,
+  createTeam as createTeamData,
   createOnlineNotification,
 } from "../lib/mvpApp";
+import {
+  applyMythicRankUpdates,
+  getValidRankStatus,
+  resetSeasonForMembers,
+} from "../lib/leaderboard";
 import {
   RemoteAppState,
   loadRemoteAppState,
@@ -31,6 +56,10 @@ interface AppState {
   tryouts: Tryout[];
   notifications: Notification[];
   squadLogoSrc: string;
+  seasons: Season[];
+  teams: Team[];
+  rpTransactions: RpTransaction[];
+  rankHistory: RankHistory[];
   isAdmin: boolean;
   authUser: AuthUser | null;
 }
@@ -51,6 +80,9 @@ interface AppContextType extends AppState {
   setTryouts: (tryouts: Tryout[]) => void;
   setNotifications: (notifications: Notification[]) => void;
   setSquadLogoSrc: (src: string) => void;
+  setTeams: (teams: Team[]) => void;
+  setRpTransactions: (transactions: RpTransaction[]) => void;
+  setRankHistory: (rankHistory: RankHistory[]) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
@@ -58,6 +90,20 @@ interface AppContextType extends AppState {
   changePassword: (password: string) => Promise<AuthActionResult>;
   notifyTeamOnline: () => Notification;
   assignMemberTeam: (memberId: string, teamName: string) => AssignTeamResult;
+  createTeam: (name: string) => AssignTeamResult;
+  archiveTeam: (teamId: string) => AssignTeamResult;
+  archiveMember: (memberId: string, reason?: string) => AssignTeamResult;
+  resetSeason: () => AssignTeamResult;
+  updateMythicRanks: (
+    updates: { memberId: string; rankStatus: RankStatus | string; stars: number }[],
+  ) => AssignTeamResult;
+  addRpTransaction: (input: {
+    memberId: string;
+    sourceType: RpSourceType;
+    amount: number;
+    description: string;
+    occurredAt?: string;
+  }) => AssignTeamResult;
   logout: () => void;
   resetData: () => void;
 }
@@ -68,13 +114,13 @@ const defaultState: AppState = {
   tryouts: mockTryouts,
   notifications: [],
   squadLogoSrc: "",
+  seasons: [ACTIVE_SEASON],
+  teams: createDefaultTeams(),
+  rpTransactions: createSeedRpTransactions(),
+  rankHistory: createSeedRankHistory(),
   isAdmin: false,
   authUser: null,
 };
-
-const MVP_OWNER_USERNAME = "kingchoou";
-const MVP_OWNER_ACCOUNT_ID = "auth_kingchoou";
-const MVP_OWNER_CREATED_AT = new Date("2026-05-16T00:00:00.000Z");
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
@@ -84,10 +130,14 @@ const activeDataKeys = [
   "tryouts",
   "notifications",
   "squadLogoSrc",
+  "seasons",
+  "teams",
+  "rpTransactions",
+  "rankHistory",
   "isAdmin",
 ];
 
-const retiredDataKeys = ["teams", "schedule", "matches", "points"];
+const retiredDataKeys = ["schedule", "matches", "points"];
 
 function storageKey(key: string) {
   return `royal_supremacy_${key}`;
@@ -112,6 +162,10 @@ function writeAppStateSnapshot(state: RemoteAppState) {
   writeStorage("tryouts", state.tryouts);
   writeStorage("notifications", state.notifications);
   writeStorage("squadLogoSrc", state.squadLogoSrc);
+  writeStorage("seasons", state.seasons);
+  writeStorage("teams", state.teams);
+  writeStorage("rpTransactions", state.rpTransactions);
+  writeStorage("rankHistory", state.rankHistory);
 }
 
 function createMemberForAuthUser(user: AuthUser): Member {
@@ -126,25 +180,55 @@ function createMemberForAuthUser(user: AuthUser): Member {
   };
 }
 
-function getInitialMembers(authUser: AuthUser | null): Member[] {
+function ensureAuthUserInRoster(members: Member[], authUser: AuthUser | null) {
   if (!authUser) {
-    return defaultState.members;
+    return members;
   }
 
-  return [createMemberForAuthUser(authUser)];
+  let didLink = false;
+  const linkedMembers = members.map((member) => {
+    if (member.username !== authUser.username) {
+      return member;
+    }
+
+    didLink = true;
+    return { ...member, authUserId: authUser.id };
+  });
+
+  if (didLink) {
+    return linkedMembers;
+  }
+
+  return [...linkedMembers, createMemberForAuthUser(authUser)];
+}
+
+function getInitialMembers(authUser: AuthUser | null): Member[] {
+  return ensureAuthUserInRoster(createSeedMembers(), authUser);
 }
 
 function runMvpMigration() {
   try {
-    if (localStorage.getItem(storageKey("schema_version")) === MVP_STORAGE_VERSION) {
+    const rawSchemaVersion = localStorage.getItem(storageKey("schema_version"));
+    const storedSchemaVersion =
+      rawSchemaVersion === MVP_STORAGE_VERSION
+        ? rawSchemaVersion
+        : readStorage<string | null>("schema_version", null);
+
+    if (storedSchemaVersion === MVP_STORAGE_VERSION) {
       return;
     }
 
     const authUser = readStorage<AuthUser | null>("auth_session", null);
+    const squadLogoSrc = readStorage<string>("squadLogoSrc", defaultState.squadLogoSrc);
     retiredDataKeys.forEach((key) => localStorage.removeItem(storageKey(key)));
     localStorage.removeItem(storageKey("isAdmin"));
     writeStorage("members", getInitialMembers(authUser));
     writeStorage("notifications", []);
+    writeStorage("seasons", defaultState.seasons);
+    writeStorage("teams", defaultState.teams);
+    writeStorage("rpTransactions", defaultState.rpTransactions);
+    writeStorage("rankHistory", defaultState.rankHistory);
+    writeStorage("squadLogoSrc", squadLogoSrc);
     writeStorage("schema_version", MVP_STORAGE_VERSION);
   } catch {
     // Local storage can be unavailable in private contexts; the in-memory defaults still work.
@@ -176,6 +260,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [squadLogoSrc, setSquadLogoSrcState] = useState<string>(
     readStorage("squadLogoSrc", defaultState.squadLogoSrc),
   );
+  const [seasons, setSeasonsState] = useState<Season[]>(
+    readStorage("seasons", defaultState.seasons),
+  );
+  const [teams, setTeamsState] = useState<Team[]>(
+    readStorage("teams", defaultState.teams),
+  );
+  const [rpTransactions, setRpTransactionsState] = useState<RpTransaction[]>(
+    readStorage("rpTransactions", defaultState.rpTransactions),
+  );
+  const [rankHistory, setRankHistoryState] = useState<RankHistory[]>(
+    readStorage("rankHistory", defaultState.rankHistory),
+  );
   const [isAdmin, setIsAdminState] = useState<boolean>(
     readStorage("isAdmin", defaultState.isAdmin),
   );
@@ -189,12 +285,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (ignore) return;
 
       if (remoteState) {
+        const hydratedState = {
+          ...remoteState,
+          seasons: remoteState.seasons.length ? remoteState.seasons : defaultState.seasons,
+          teams: remoteState.teams.length ? remoteState.teams : defaultState.teams,
+          rpTransactions: remoteState.rpTransactions.length
+            ? remoteState.rpTransactions
+            : defaultState.rpTransactions,
+          rankHistory: remoteState.rankHistory.length
+            ? remoteState.rankHistory
+            : defaultState.rankHistory,
+        };
         setMembersState(remoteState.members);
         setAnnouncementsState(remoteState.announcements);
         setTryoutsState(remoteState.tryouts);
         setNotificationsState(remoteState.notifications);
         setSquadLogoSrcState(remoteState.squadLogoSrc);
-        writeAppStateSnapshot(remoteState);
+        setSeasonsState(hydratedState.seasons);
+        setTeamsState(hydratedState.teams);
+        setRpTransactionsState(hydratedState.rpTransactions);
+        setRankHistoryState(hydratedState.rankHistory);
+        writeAppStateSnapshot(hydratedState);
       }
 
       setIsRemoteHydrated(true);
@@ -225,6 +336,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tryouts,
         notifications,
         squadLogoSrc,
+        seasons,
+        teams,
+        rpTransactions,
+        rankHistory,
       });
     }, 700);
 
@@ -238,7 +353,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     isRemoteHydrated,
     members,
     notifications,
+    rankHistory,
+    rpTransactions,
+    seasons,
     squadLogoSrc,
+    teams,
     tryouts,
   ]);
 
@@ -267,6 +386,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeStorage("squadLogoSrc", src);
   };
 
+  const setTeams = (nextTeams: Team[]) => {
+    setTeamsState(nextTeams);
+    writeStorage("teams", nextTeams);
+  };
+
+  const setRpTransactions = (nextTransactions: RpTransaction[]) => {
+    setRpTransactionsState(nextTransactions);
+    writeStorage("rpTransactions", nextTransactions);
+  };
+
+  const setRankHistory = (nextRankHistory: RankHistory[]) => {
+    setRankHistoryState(nextRankHistory);
+    writeStorage("rankHistory", nextRankHistory);
+  };
+
   const setIsAdmin = (nextIsAdmin: boolean) => {
     setIsAdminState(nextIsAdmin);
     writeStorage("isAdmin", nextIsAdmin);
@@ -277,39 +411,41 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeStorage("auth_accounts", accounts);
   };
 
-  const ensureMvpOwnerAccount = async (accounts: LocalAuthAccount[]) => {
-    const result = await ensureLocalAccount(
-      accounts,
-      MVP_OWNER_USERNAME,
-      ADMIN_PORTAL_PASSWORD,
-      {
-        id: MVP_OWNER_ACCOUNT_ID,
-        now: MVP_OWNER_CREATED_AT,
-      },
-    );
+  const ensureSeedAccounts = async (accounts: LocalAuthAccount[]) => {
+    let nextAccounts = accounts;
 
-    if (result.error) {
-      return accounts;
+    for (const seedAccount of SEED_AUTH_CREDENTIALS) {
+      const result = await ensureLocalAccount(
+        nextAccounts,
+        seedAccount.username,
+        seedAccount.password,
+        {
+          id: seedAccount.id,
+          now: seedAccount.createdAt,
+        },
+      );
+
+      if (!result.error) {
+        nextAccounts = result.accounts;
+      }
     }
 
-    return result.accounts;
+    return nextAccounts;
   };
 
   useEffect(() => {
     let ignore = false;
 
-    async function seedMvpOwnerAccount() {
-      const nextAccounts = await ensureMvpOwnerAccount(authAccounts);
+    async function seedMvpAccounts() {
+      const nextAccounts = await ensureSeedAccounts(authAccounts);
       if (ignore || nextAccounts === authAccounts) {
         return;
       }
 
       setAuthAccountsState((currentAccounts) => {
-        if (
-          currentAccounts.some(
-            (account) => account.username === MVP_OWNER_USERNAME,
-          )
-        ) {
+        if (SEED_AUTH_CREDENTIALS.every((seedAccount) =>
+          currentAccounts.some((account) => account.username === seedAccount.username),
+        )) {
           return currentAccounts;
         }
 
@@ -322,7 +458,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       });
     }
 
-    void seedMvpOwnerAccount();
+    void seedMvpAccounts();
 
     return () => {
       ignore = true;
@@ -340,12 +476,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const ensureMemberForUser = (user: AuthUser) => {
     setMembersState((currentMembers) => {
-      if (
-        currentMembers.some(
-          (member) => member.authUserId === user.id || member.username === user.username,
-        )
-      ) {
+      if (currentMembers.some((member) => member.authUserId === user.id)) {
         return currentMembers;
+      }
+
+      if (currentMembers.some((member) => member.username === user.username)) {
+        const nextMembers = currentMembers.map((member) =>
+          member.username === user.username ? { ...member, authUserId: user.id } : member,
+        );
+        writeStorage("members", nextMembers);
+        return nextMembers;
       }
 
       const nextMembers = [...currentMembers, createMemberForAuthUser(user)];
@@ -367,12 +507,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (identifier: string, password: string) => {
-    let accountsForLogin = authAccounts;
-    if (normalizeIdentifier(identifier) === MVP_OWNER_USERNAME) {
-      accountsForLogin = await ensureMvpOwnerAccount(authAccounts);
-      if (accountsForLogin !== authAccounts) {
-        persistAuthAccounts(accountsForLogin);
-      }
+    const accountsForLogin = await ensureSeedAccounts(authAccounts);
+    if (accountsForLogin !== authAccounts) {
+      persistAuthAccounts(accountsForLogin);
     }
 
     const result = await verifyLocalCredentials(accountsForLogin, identifier, password);
@@ -422,12 +559,136 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const assignMemberTeam = (memberId: string, teamName: string) => {
-    const result = assignMemberTeamData(members, memberId, teamName, isAdmin);
+    const result = assignMemberTeamData(members, memberId, teamName, isAdmin, teams);
     if (result.ok) {
       setMembers(result.members);
     }
 
     return { ok: result.ok, error: result.error };
+  };
+
+  const createTeam = (name: string) => {
+    const result = createTeamData(teams, name, isAdmin);
+    if (result.ok) {
+      setTeams(result.teams);
+    }
+
+    return { ok: result.ok, error: result.error };
+  };
+
+  const archiveTeam = (teamId: string) => {
+    const result = archiveTeamData(teams, members, teamId, isAdmin);
+    if (result.ok) {
+      setTeams(result.teams);
+      setMembers(result.members);
+    }
+
+    return { ok: result.ok, error: result.error };
+  };
+
+  const archiveMember = (memberId: string, reason?: string) => {
+    const result = archiveMemberData(members, memberId, isAdmin, reason);
+    if (result.ok) {
+      setMembers(result.members);
+    }
+
+    return { ok: result.ok, error: result.error };
+  };
+
+  const getActiveSeasonId = () =>
+    seasons.find((season) => season.isActive)?.id ?? ACTIVE_SEASON.id;
+
+  const updateMythicRanks = (
+    updates: { memberId: string; rankStatus: RankStatus | string; stars: number }[],
+  ) => {
+    const result = applyMythicRankUpdates({
+      isAdmin,
+      members,
+      rankHistory,
+      transactions: rpTransactions,
+      seasonId: getActiveSeasonId(),
+      updates,
+    });
+
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+
+    const updateMap = new Map(
+      updates.map((update) => [
+        update.memberId,
+        getValidRankStatus(update.rankStatus),
+      ]),
+    );
+    const updatedMembers = members.map((member) => {
+      const rankStatus = updateMap.get(member.id);
+      return rankStatus ? { ...member, currentRank: rankStatus } : member;
+    });
+
+    setMembers(updatedMembers);
+    setRankHistory(result.rankHistory);
+    setRpTransactions(result.transactions);
+
+    return { ok: true };
+  };
+
+  const addRpTransaction = (input: {
+    memberId: string;
+    sourceType: RpSourceType;
+    amount: number;
+    description: string;
+    occurredAt?: string;
+  }) => {
+    if (!isAdmin) {
+      return {
+        ok: false,
+        error: "Only Admin Portal users can add RP transactions.",
+      };
+    }
+
+    if (!members.some((member) => member.id === input.memberId)) {
+      return { ok: false, error: "Member not found." };
+    }
+
+    if (!Number.isFinite(input.amount) || input.amount === 0) {
+      return { ok: false, error: "Enter a non-zero RP amount." };
+    }
+
+    const now = new Date();
+    const timestamp = input.occurredAt || now.toISOString();
+    const nextTransaction: RpTransaction = {
+      id: `rp_manual_${input.memberId}_${now.getTime()}`,
+      seasonId: getActiveSeasonId(),
+      memberId: input.memberId,
+      sourceType: input.sourceType,
+      amount: Math.trunc(input.amount),
+      description: input.description.trim() || "Admin Portal RP adjustment",
+      occurredAt: timestamp,
+      createdAt: now.toISOString(),
+    };
+
+    setRpTransactions([nextTransaction, ...rpTransactions]);
+    return { ok: true };
+  };
+
+  const resetSeason = () => {
+    const result = resetSeasonForMembers({
+      isAdmin,
+      seasons,
+      members,
+      rankHistory,
+    });
+
+    if (!result.ok) {
+      return { ok: false, error: result.error };
+    }
+
+    setSeasonsState(result.seasons);
+    setMembers(result.members);
+    setRankHistory(result.rankHistory);
+    writeStorage("seasons", result.seasons);
+
+    return { ok: true };
   };
 
   const logout = () => {
@@ -446,12 +707,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTryoutsState(defaultState.tryouts);
     setNotificationsState(defaultState.notifications);
     setSquadLogoSrcState(defaultState.squadLogoSrc);
+    setSeasonsState(defaultState.seasons);
+    setTeamsState(defaultState.teams);
+    setRpTransactionsState(defaultState.rpTransactions);
+    setRankHistoryState(defaultState.rankHistory);
     setIsAdminState(defaultState.isAdmin);
     writeStorage("members", nextMembers);
     writeStorage("announcements", defaultState.announcements);
     writeStorage("tryouts", defaultState.tryouts);
     writeStorage("notifications", defaultState.notifications);
     writeStorage("squadLogoSrc", defaultState.squadLogoSrc);
+    writeStorage("seasons", defaultState.seasons);
+    writeStorage("teams", defaultState.teams);
+    writeStorage("rpTransactions", defaultState.rpTransactions);
+    writeStorage("rankHistory", defaultState.rankHistory);
   };
 
   return (
@@ -462,6 +731,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         tryouts,
         notifications,
         squadLogoSrc,
+        seasons,
+        teams,
+        rpTransactions,
+        rankHistory,
         isAdmin,
         authUser,
         setMembers,
@@ -469,6 +742,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTryouts,
         setNotifications,
         setSquadLogoSrc,
+        setTeams,
+        setRpTransactions,
+        setRankHistory,
         setIsAdmin,
         login,
         signup,
@@ -476,6 +752,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         changePassword,
         notifyTeamOnline,
         assignMemberTeam,
+        createTeam,
+        archiveTeam,
+        archiveMember,
+        resetSeason,
+        updateMythicRanks,
+        addRpTransaction,
         logout,
         resetData,
       }}

@@ -3,6 +3,7 @@ export interface Member {
   username: string;
   authUserId?: string;
   playerName: string;
+  normalizedName?: string;
   mlbbId: string;
   serverId: string;
   mainRole: string;
@@ -12,8 +13,21 @@ export interface Member {
   highestRank: string;
   team: string;
   status: string; // Active, Inactive, Trial, Suspended, Left
+  lifecycleStatus?: "Active" | "Archived";
+  archivedAt?: string;
+  archivedReason?: string;
   bannerId: string;
   profileImageSrc?: string;
+  joinedAt?: string;
+  notes?: string;
+}
+
+export interface Team {
+  id: string;
+  name: string;
+  createdAt: string;
+  isDefault?: boolean;
+  archivedAt?: string;
 }
 
 export interface Notification {
@@ -38,6 +52,21 @@ export interface Announcement {
   priority: string; // Normal, Important, Urgent
   postedBy: string;
   date: string;
+  imageSrc?: string;
+  imageName?: string;
+  likedBy?: string[];
+  savedBy?: string[];
+  comments?: AnnouncementComment[];
+  deletedAt?: string;
+  deletedBy?: string;
+}
+
+export interface AnnouncementComment {
+  id: string;
+  author: string;
+  message: string;
+  createdAt: string;
+  editedAt?: string;
 }
 
 export interface Tryout {
@@ -55,4 +84,54 @@ export interface Tryout {
   whatsapp: string;
   reason: string; // Why they want to join
   status: string; // Pending, Accepted, Rejected, Trial, Needs Test Match
+}
+
+export type RankStatus =
+  | "Unranked"
+  | "Grandmaster"
+  | "Epic"
+  | "Legend"
+  | "Mythic"
+  | "Mythical Honor"
+  | "Mythical Glory"
+  | "Mythical Immortal"
+  | "Mythic Placement";
+
+export type RpSourceType =
+  | "Royal FunFest"
+  | "Customs"
+  | "Supreme Titles"
+  | "Active Points"
+  | "Mythic Stars"
+  | "Manual Adjustments"
+  | "Starting Average for new members";
+
+export interface Season {
+  id: string;
+  name: string;
+  mlbbSeasonNumber: number;
+  startDate: string;
+  endDate?: string;
+  isActive: boolean;
+}
+
+export interface RpTransaction {
+  id: string;
+  seasonId: string;
+  memberId: string;
+  sourceType: RpSourceType;
+  amount: number;
+  description: string;
+  occurredAt: string;
+  createdAt: string;
+}
+
+export interface RankHistory {
+  id: string;
+  seasonId: string;
+  memberId: string;
+  rankStatus: RankStatus;
+  stars: number;
+  recordedAt: string;
+  createdAt: string;
 }

@@ -169,8 +169,8 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 text-left">
-      <div>
+    <div className="flex min-w-0 flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 text-left">
+      <div className="min-w-0">
         <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-2 uppercase shrink-0 mlbb-title">
           <span className="gold-gradient-text">{title}</span>
         </h1>
@@ -179,7 +179,7 @@ export function PageHeader({
         )}
       </div>
       {children && (
-        <div className="flex items-center gap-3 shrink-0">{children}</div>
+        <div className="flex max-w-full flex-wrap items-center gap-3 sm:shrink-0">{children}</div>
       )}
     </div>
   );

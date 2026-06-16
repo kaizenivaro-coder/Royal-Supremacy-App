@@ -61,6 +61,7 @@ test("filterMembers searches ranks, heroes, ids, and secondary roles", () => {
 
 test("getAdminTabFromSearch only accepts supported MVP admin tabs", () => {
   assert.equal(getAdminTabFromSearch("?tab=members"), "members");
+  assert.equal(getAdminTabFromSearch("?tab=rank-command"), "rank-command");
   assert.equal(getAdminTabFromSearch("?tab=matches"), "general");
   assert.equal(getAdminTabFromSearch("?tab=unknown"), "general");
   assert.equal(getAdminTabFromSearch(""), "general");

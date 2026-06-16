@@ -2,13 +2,21 @@ import { useMemo, useState } from "react";
 import { Shield, UserCircle, Users, X } from "lucide-react";
 import { useAppStore } from "../data/store";
 import { Badge, Card, PageHeader } from "../components/ui";
-import { TEAM_GROUPS, groupMembersByTeam } from "../lib/mvpApp";
+import { getActiveMembers, groupMembersByTeam } from "../lib/mvpApp";
 import type { Member } from "../types";
 
 export default function Teams() {
-  const { members } = useAppStore();
+  const { members, teams } = useAppStore();
   const [selectedMember, setSelectedMember] = useState<Member | null>(null);
-  const groupedMembers = useMemo(() => groupMembersByTeam(members), [members]);
+  const activeMembers = useMemo(() => getActiveMembers(members), [members]);
+  const activeTeams = useMemo(
+    () => teams.filter((team) => !team.archivedAt),
+    [teams],
+  );
+  const groupedMembers = useMemo(
+    () => groupMembersByTeam(activeMembers, activeTeams),
+    [activeMembers, activeTeams],
+  );
 
   return (
     <div className="space-y-8 pb-10 text-left">
@@ -18,21 +26,21 @@ export default function Teams() {
       />
 
       <div className="grid grid-cols-1 gap-4 xl:grid-cols-5">
-        {TEAM_GROUPS.map((team) => {
-          const teamMembers = groupedMembers[team];
+        {activeTeams.map((team) => {
+          const teamMembers = groupedMembers[team.name] ?? [];
 
           return (
-            <Card key={team} className="flex min-h-64 flex-col p-5">
+            <Card key={team.id} className="flex min-h-64 flex-col p-5">
               <div className="mb-4 flex items-start justify-between gap-3">
                 <div>
                   <div className="mb-3 grid h-10 w-10 place-items-center rounded-lg border border-gold/25 bg-gold/10 text-gold">
                     <Shield size={18} />
                   </div>
                   <h2 className="text-base font-black uppercase leading-tight text-white">
-                    {team}
+                    {team.name}
                   </h2>
                 </div>
-                <Badge variant={team === "Unassigned" ? "gold" : "purple"}>
+                <Badge variant={team.name === "Unassigned" ? "gold" : "purple"}>
                   {teamMembers.length}
                 </Badge>
               </div>
