@@ -33,12 +33,24 @@ fallback cache.
 Required public Vite variables:
 
 ```bash
-VITE_SUPABASE_URL="https://sjzmuegqldknoxddvzda.supabase.co"
-VITE_SUPABASE_PUBLISHABLE_KEY="your_publishable_key"
+VITE_SUPABASE_URL="https://your-project-ref.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY="sb_publishable_your_publishable_key"
 ```
 
 The current RLS policies are permissive for the private friend-demo MVP. Tighten
 them before sharing the app broadly.
+
+### GitHub Pages Supabase Setup
+
+GitHub Pages builds read Supabase config from repository settings:
+
+- Repository variable: `VITE_SUPABASE_URL`
+- Repository secret: `VITE_SUPABASE_PUBLISHABLE_KEY`
+
+The free-tier keepalive workflow in `.github/workflows/supabase-keepalive.yml`
+runs every Monday and Thursday at 06:00 UTC, and can also be run manually from
+GitHub Actions. It pings the `public.mvp_app_state` REST endpoint so Supabase
+sees real database API activity.
 
 ## Public Link
 

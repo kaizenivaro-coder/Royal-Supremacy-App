@@ -1,0 +1,46 @@
+name: Supabase Keepalive
+
+on:
+  schedule:
+    # Runs Monday and Thursday at 06:00 UTC, safely inside Supabase's 7-day
+    # free-tier inactivity window.
+    - cron: "0 6 * * 1,4"
+  workflow_dispatch:
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    env:
+      SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
+
+    steps:
+      - name: Validate Supabase configuration
+        run: |
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "Missing repository variable: VITE_SUPABASE_URL"
+            exit 1
+          fi
+
+          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Missing repository secret: VITE_SUPABASE_PUBLISHABLE_KEY"
+            exit 1
+          fi
+
+      - name: Ping app state table
+        run: |
+          set -euo pipefail
+
+          CLEAN_URL="${SUPABASE_URL%/}"
+          STATUS_CODE="$(curl --silent --show-error --output /tmp/supabase_keepalive.json --write-out "%{http_code}" \
+            "${CLEAN_URL}/rest/v1/mvp_app_state?select=id&id=eq.royal-supremacy&limit=1" \
+            -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
+            -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}")"
+
+          if [ "$STATUS_CODE" != "200" ] && [ "$STATUS_CODE" != "206" ]; then
+            echo "Supabase keepalive failed with HTTP ${STATUS_CODE}"
+            cat /tmp/supabase_keepalive.json
+            exit 1
+          fi
+
+          echo "Supabase keepalive succeeded."
