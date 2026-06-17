@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Shield, UserCircle, Users, X } from "lucide-react";
+import { ArrowLeft, Shield, UserCircle, Users } from "lucide-react";
 import { useAppStore } from "../data/store";
 import { Badge, Card, PageHeader } from "../components/ui";
 import { getActiveMembers, groupMembersByTeam } from "../lib/mvpApp";
@@ -90,9 +90,22 @@ export default function Teams() {
       </div>
 
       {selectedMember && (
-        <div className="fixed inset-0 z-[80] grid place-items-center bg-black/75 p-4">
-          <div className="w-full max-w-md rounded-lg border border-gold/20 bg-surface p-6 shadow-2xl">
-            <div className="mb-5 flex items-start justify-between gap-4">
+        <div
+          className="fixed inset-0 z-[80] grid place-items-center bg-black/72 p-4 backdrop-blur-sm"
+          role="dialog"
+          aria-modal="true"
+          aria-label={`${selectedMember.playerName} player details`}
+        >
+          <div className="w-full max-w-lg overflow-hidden rounded-lg border border-blue-200/20 bg-surface shadow-[0_28px_90px_rgba(0,0,0,0.52)]">
+            <div className="flex items-start gap-4 border-b border-white/10 p-4 md:p-5">
+              <button
+                type="button"
+                onClick={() => setSelectedMember(null)}
+                className="grid h-11 w-11 shrink-0 place-items-center rounded-full text-white transition hover:bg-white/10 focus:outline-none focus:ring-2 focus:ring-gold/60"
+                aria-label="Close player details"
+              >
+                <ArrowLeft size={24} />
+              </button>
               <div className="flex items-center gap-3">
                 <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-lg border border-gold/30 bg-gold/10 text-gold">
                   {selectedMember.profileImageSrc ? (
@@ -112,17 +125,9 @@ export default function Teams() {
                   <p className="text-xs font-bold text-gold">@{selectedMember.username}</p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedMember(null)}
-                className="grid h-9 w-9 place-items-center rounded-lg border border-blue-200/10 text-text-muted transition hover:border-gold/30 hover:text-white"
-                aria-label="Close player details"
-              >
-                <X className="h-5 w-5" />
-              </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="grid grid-cols-2 gap-3 p-4 md:p-5">
               {[
                 ["Team", selectedMember.team],
                 ["Status", selectedMember.status],
@@ -144,7 +149,7 @@ export default function Teams() {
               ))}
             </div>
 
-            <div className="mt-4 rounded-lg border border-blue-200/10 bg-background/50 p-3">
+            <div className="mx-4 mb-4 rounded-lg border border-blue-200/10 bg-background/50 p-3 md:mx-5 md:mb-5">
               <p className="text-[9px] font-black uppercase tracking-widest text-text-muted">
                 Signature Heroes
               </p>

@@ -46,6 +46,7 @@ import {
 import {
   RemoteAppState,
   loadRemoteAppState,
+  reconcileRemoteAppState,
   saveRemoteAppState,
 } from "../lib/supabaseAppState";
 import { isSupabaseConfigured } from "../lib/supabaseClient";
@@ -168,6 +169,20 @@ function writeAppStateSnapshot(state: RemoteAppState) {
   writeStorage("rankHistory", state.rankHistory);
 }
 
+function createFallbackAppState(authUser: AuthUser | null): RemoteAppState {
+  return {
+    members: getInitialMembers(authUser),
+    announcements: defaultState.announcements,
+    tryouts: defaultState.tryouts,
+    notifications: defaultState.notifications,
+    squadLogoSrc: readStorage("squadLogoSrc", defaultState.squadLogoSrc),
+    seasons: defaultState.seasons,
+    teams: defaultState.teams,
+    rpTransactions: defaultState.rpTransactions,
+    rankHistory: defaultState.rankHistory,
+  };
+}
+
 function createMemberForAuthUser(user: AuthUser): Member {
   return {
     ...mockMembers[0],
@@ -245,32 +260,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authUser, setAuthUserState] = useState<AuthUser | null>(
     readStorage("auth_session", defaultState.authUser),
   );
+  const localFallbackState = createFallbackAppState(authUser);
+  const initialLocalAppState = reconcileRemoteAppState(
+    {
+      members: readStorage("members", localFallbackState.members),
+      announcements: readStorage("announcements", localFallbackState.announcements),
+      tryouts: readStorage("tryouts", localFallbackState.tryouts),
+      notifications: readStorage("notifications", localFallbackState.notifications),
+      squadLogoSrc: readStorage("squadLogoSrc", localFallbackState.squadLogoSrc),
+      seasons: readStorage("seasons", localFallbackState.seasons),
+      teams: readStorage("teams", localFallbackState.teams),
+      rpTransactions: readStorage("rpTransactions", localFallbackState.rpTransactions),
+      rankHistory: readStorage("rankHistory", localFallbackState.rankHistory),
+    },
+    localFallbackState,
+  );
   const [members, setMembersState] = useState<Member[]>(
-    readStorage("members", getInitialMembers(authUser)),
+    initialLocalAppState.members,
   );
   const [announcements, setAnnouncementsState] = useState<Announcement[]>(
-    readStorage("announcements", defaultState.announcements),
+    initialLocalAppState.announcements,
   );
   const [tryouts, setTryoutsState] = useState<Tryout[]>(
-    readStorage("tryouts", defaultState.tryouts),
+    initialLocalAppState.tryouts,
   );
   const [notifications, setNotificationsState] = useState<Notification[]>(
-    readStorage("notifications", defaultState.notifications),
+    initialLocalAppState.notifications,
   );
   const [squadLogoSrc, setSquadLogoSrcState] = useState<string>(
-    readStorage("squadLogoSrc", defaultState.squadLogoSrc),
+    initialLocalAppState.squadLogoSrc,
   );
   const [seasons, setSeasonsState] = useState<Season[]>(
-    readStorage("seasons", defaultState.seasons),
+    initialLocalAppState.seasons,
   );
   const [teams, setTeamsState] = useState<Team[]>(
-    readStorage("teams", defaultState.teams),
+    initialLocalAppState.teams,
   );
   const [rpTransactions, setRpTransactionsState] = useState<RpTransaction[]>(
-    readStorage("rpTransactions", defaultState.rpTransactions),
+    initialLocalAppState.rpTransactions,
   );
   const [rankHistory, setRankHistoryState] = useState<RankHistory[]>(
-    readStorage("rankHistory", defaultState.rankHistory),
+    initialLocalAppState.rankHistory,
   );
   const [isAdmin, setIsAdminState] = useState<boolean>(
     readStorage("isAdmin", defaultState.isAdmin),
@@ -285,22 +315,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (ignore) return;
 
       if (remoteState) {
-        const hydratedState = {
-          ...remoteState,
-          seasons: remoteState.seasons.length ? remoteState.seasons : defaultState.seasons,
-          teams: remoteState.teams.length ? remoteState.teams : defaultState.teams,
-          rpTransactions: remoteState.rpTransactions.length
-            ? remoteState.rpTransactions
-            : defaultState.rpTransactions,
-          rankHistory: remoteState.rankHistory.length
-            ? remoteState.rankHistory
-            : defaultState.rankHistory,
-        };
-        setMembersState(remoteState.members);
-        setAnnouncementsState(remoteState.announcements);
-        setTryoutsState(remoteState.tryouts);
-        setNotificationsState(remoteState.notifications);
-        setSquadLogoSrcState(remoteState.squadLogoSrc);
+        const hydratedState = reconcileRemoteAppState(
+          remoteState,
+          createFallbackAppState(authUser),
+        );
+        setMembersState(hydratedState.members);
+        setAnnouncementsState(hydratedState.announcements);
+        setTryoutsState(hydratedState.tryouts);
+        setNotificationsState(hydratedState.notifications);
+        setSquadLogoSrcState(hydratedState.squadLogoSrc);
         setSeasonsState(hydratedState.seasons);
         setTeamsState(hydratedState.teams);
         setRpTransactionsState(hydratedState.rpTransactions);

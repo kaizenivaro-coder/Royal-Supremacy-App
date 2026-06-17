@@ -28,6 +28,88 @@ const navItems = [
   { name: "Admin Portal", path: "/admin", icon: FileEdit },
 ];
 
+type SidebarContentProps = {
+  pathname: string;
+  commanderName: string;
+  squadLogoSrc: string;
+  onNavigate?: () => void;
+  onLogout: () => void;
+};
+
+function SidebarContent({
+  pathname,
+  commanderName,
+  squadLogoSrc,
+  onNavigate,
+  onLogout,
+}: SidebarContentProps) {
+  return (
+    <>
+      <div className="hidden items-center gap-3 border-b border-blue-200/10 p-6 text-gold lg:flex">
+        <SquadLogoPlaceholder src={squadLogoSrc} className="h-9 w-9 shrink-0" />
+        <div className="flex flex-col uppercase">
+          <span className="font-display text-lg font-black leading-tight tracking-[0.18em] text-gold mlbb-title">
+            Royal
+          </span>
+          <span className="font-display text-sm font-semibold leading-tight tracking-[0.1em] text-white/90">
+            Supremacy
+          </span>
+        </div>
+      </div>
+
+      <nav className="mt-16 space-y-1 p-4 lg:mt-0">
+        <div className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted/60">
+          MVP Command
+        </div>
+        {navItems.map((item) => {
+          const Icon = item.icon;
+          const isActive = pathname === item.path;
+
+          return (
+            <NavLink
+              key={item.name}
+              to={item.path}
+              onClick={onNavigate}
+              className={cn(
+                "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+                isActive
+                  ? "border-gold/30 bg-gold/10 text-gold shadow-[0_0_18px_rgba(242,196,83,0.1)]"
+                  : "border-transparent text-text-muted hover:border-blue-200/10 hover:bg-surface-hover hover:text-white",
+              )}
+            >
+              <Icon
+                className={cn(
+                  "h-5 w-5",
+                  isActive ? "text-gold" : "opacity-70 group-hover:opacity-100",
+                )}
+              />
+              {item.name}
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      <div className="absolute bottom-8 left-4 right-4 rounded-lg border border-gold/15 bg-background/70 p-4">
+        <div className="mb-2 flex items-center gap-3">
+          <div className="h-2 w-2 rounded-full bg-success" />
+          <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+            Signed In
+          </span>
+        </div>
+        <div className="truncate text-xs font-semibold text-white">{commanderName}</div>
+        <button
+          type="button"
+          onClick={onLogout}
+          className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-blue-200/10 bg-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-text-muted transition hover:border-gold/25 hover:text-white"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          Sign Out
+        </button>
+      </div>
+    </>
+  );
+}
+
 export default function RootLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const location = useLocation();
@@ -64,73 +146,25 @@ export default function RootLayout() {
         />
       )}
 
-      <aside
-        className={cn(
-          "fixed inset-y-0 left-0 z-50 h-screen w-64 transform overflow-y-auto border-r border-white/5 bg-surface transition-transform duration-300 lg:relative lg:translate-x-0",
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full",
-        )}
-      >
-        <div className="hidden items-center gap-3 border-b border-blue-200/10 p-6 text-gold lg:flex">
-          <SquadLogoPlaceholder src={squadLogoSrc} className="h-9 w-9 shrink-0" />
-          <div className="flex flex-col uppercase">
-            <span className="font-display text-lg font-black leading-tight tracking-[0.18em] text-gold mlbb-title">
-              Royal
-            </span>
-            <span className="font-display text-sm font-semibold leading-tight tracking-[0.1em] text-white/90">
-              Supremacy
-            </span>
-          </div>
-        </div>
+      {mobileMenuOpen && (
+        <aside className="fixed inset-y-0 left-0 z-50 h-screen w-64 overflow-y-auto border-r border-white/5 bg-surface lg:hidden">
+          <SidebarContent
+            pathname={location.pathname}
+            commanderName={commanderName}
+            squadLogoSrc={squadLogoSrc}
+            onNavigate={() => setMobileMenuOpen(false)}
+            onLogout={logout}
+          />
+        </aside>
+      )}
 
-        <nav className="mt-16 space-y-1 p-4 lg:mt-0">
-          <div className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted/60">
-            MVP Command
-          </div>
-          {navItems.map((item) => {
-            const Icon = item.icon;
-            const isActive = location.pathname === item.path;
-
-            return (
-              <NavLink
-                key={item.name}
-                to={item.path}
-                onClick={() => setMobileMenuOpen(false)}
-                className={cn(
-                  "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-all duration-200",
-                  isActive
-                    ? "border-gold/30 bg-gold/10 text-gold shadow-[0_0_18px_rgba(242,196,83,0.1)]"
-                    : "border-transparent text-text-muted hover:border-blue-200/10 hover:bg-surface-hover hover:text-white",
-                )}
-              >
-                <Icon
-                  className={cn(
-                    "h-5 w-5",
-                    isActive ? "text-gold" : "opacity-70 group-hover:opacity-100",
-                  )}
-                />
-                {item.name}
-              </NavLink>
-            );
-          })}
-        </nav>
-
-        <div className="absolute bottom-8 left-4 right-4 rounded-lg border border-gold/15 bg-background/70 p-4">
-          <div className="mb-2 flex items-center gap-3">
-            <div className="h-2 w-2 rounded-full bg-success" />
-            <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-              Signed In
-            </span>
-          </div>
-          <div className="truncate text-xs font-semibold text-white">{commanderName}</div>
-          <button
-            type="button"
-            onClick={logout}
-            className="mt-3 flex w-full items-center justify-center gap-2 rounded-lg border border-blue-200/10 bg-white/5 px-3 py-2 text-[10px] font-black uppercase tracking-wider text-text-muted transition hover:border-gold/25 hover:text-white"
-          >
-            <LogOut className="h-3.5 w-3.5" />
-            Sign Out
-          </button>
-        </div>
+      <aside className="relative hidden h-screen w-64 overflow-y-auto border-r border-white/5 bg-surface lg:block">
+        <SidebarContent
+          pathname={location.pathname}
+          commanderName={commanderName}
+          squadLogoSrc={squadLogoSrc}
+          onLogout={logout}
+        />
       </aside>
 
       <main className="min-h-screen w-full flex-1 pt-16 lg:pt-0">

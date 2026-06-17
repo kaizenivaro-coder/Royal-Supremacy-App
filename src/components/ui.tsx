@@ -169,7 +169,7 @@ export function PageHeader({
   children?: React.ReactNode;
 }) {
   return (
-    <div className="flex min-w-0 flex-col sm:flex-row sm:items-end justify-between mb-10 gap-4 text-left">
+    <div className="flex min-w-0 flex-col sm:flex-row sm:items-end justify-between mb-8 gap-4 text-left">
       <div className="min-w-0">
         <h1 className="text-4xl md:text-5xl font-display font-black text-white mb-2 uppercase shrink-0 mlbb-title">
           <span className="gold-gradient-text">{title}</span>

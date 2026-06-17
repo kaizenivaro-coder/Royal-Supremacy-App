@@ -19,7 +19,12 @@ import {
   getProfileBanner,
   groupMembersByTeam,
 } from "../lib/mvpApp";
-import type { Announcement, Member, Notification } from "../types";
+import {
+  calculateMythicLeaderboard,
+  calculateRpLeaderboard,
+} from "../lib/leaderboard";
+import { ACTIVE_SEASON } from "../data/leaderboardSeed";
+import type { Announcement, Member, Notification, RankHistory, RpTransaction } from "../types";
 
 export type QuickPanel = "announcements" | "teams" | "tryouts" | "profile" | "notify";
 
@@ -32,11 +37,64 @@ const quickActions = [
   { id: "profile", label: "Profile", icon: UserCircle },
 ] satisfies { id: QuickPanel; label: string; icon: typeof Megaphone }[];
 
-const analyticsCards = [
-  { label: "Win Trend", value: "Coming soon", icon: TrendingUp },
-  { label: "Hero Pool", value: "Coming soon", icon: Shield },
-  { label: "Activity", value: "Local MVP", icon: Activity },
-];
+type DashboardAnalyticsInput = {
+  currentMember: Member | undefined;
+  members: Member[];
+  rpTransactions: RpTransaction[];
+  rankHistory: RankHistory[];
+  activeSeasonId: string;
+  pendingTryoutsCount: number;
+};
+
+export function createDashboardAnalyticsCards({
+  currentMember,
+  members,
+  rpTransactions,
+  rankHistory,
+  activeSeasonId,
+  pendingTryoutsCount,
+}: DashboardAnalyticsInput) {
+  const activeMembers = getActiveMembers(members);
+  const memberRefs = activeMembers.map((member) => ({
+    id: member.id,
+    playerName: member.playerName,
+  }));
+  const rpEntry = currentMember
+    ? calculateRpLeaderboard({
+        members: memberRefs,
+        transactions: rpTransactions,
+        seasonId: activeSeasonId,
+      }).find((entry) => entry.memberId === currentMember.id)
+    : undefined;
+  const mythicEntry = currentMember
+    ? calculateMythicLeaderboard({
+        members: memberRefs,
+        rankHistory,
+        seasonId: activeSeasonId,
+      }).starEntries.find((entry) => entry.memberId === currentMember.id)
+    : undefined;
+
+  return [
+    {
+      label: "Current RP",
+      value: String(rpEntry?.score ?? 0),
+      detail: rpEntry ? `Rank #${rpEntry.rank}` : "No RP yet",
+      icon: TrendingUp,
+    },
+    {
+      label: "Mythic Stars",
+      value: String(mythicEntry?.score ?? 0),
+      detail: mythicEntry ? `Position #${mythicEntry.rank}` : "No stars",
+      icon: Shield,
+    },
+    {
+      label: "Pending Tryouts",
+      value: String(pendingTryoutsCount),
+      detail: `${activeMembers.length} active members`,
+      icon: Activity,
+    },
+  ];
+}
 
 type DashboardQuickActionDialogProps = {
   panel: QuickPanel | null;
@@ -259,6 +317,9 @@ export default function Dashboard() {
     notifications,
     authUser,
     teams,
+    rpTransactions,
+    rankHistory,
+    seasons,
     notifyTeamOnline,
   } = useAppStore();
   const [activePanel, setActivePanel] = useState<QuickPanel | null>(null);
@@ -287,6 +348,16 @@ export default function Dashboard() {
   const pendingTryoutsCount = tryouts.filter((tryout) =>
     ["Pending", "Trial", "Needs Test Match"].includes(tryout.status),
   ).length;
+  const activeSeasonId =
+    seasons.find((season) => season.isActive)?.id ?? ACTIVE_SEASON.id;
+  const analyticsCards = createDashboardAnalyticsCards({
+    currentMember,
+    members,
+    rpTransactions,
+    rankHistory,
+    activeSeasonId,
+    pendingTryoutsCount,
+  });
   const banner = getProfileBanner(currentMember?.bannerId);
 
   const openPanel = (panel: QuickPanel) => {
@@ -454,6 +525,9 @@ export default function Dashboard() {
                     {card.label}
                   </p>
                   <p className="mt-1 text-lg font-black text-white">{card.value}</p>
+                  <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-text-muted/80">
+                    {card.detail}
+                  </p>
                 </div>
               </div>
             </Card>

@@ -12,8 +12,18 @@ export default function MobilePreview() {
             <h1 className="mt-2 font-display text-2xl font-black uppercase text-white mlbb-title">
               Phone Preview
             </h1>
+            <p className="mt-2 max-w-sm text-sm font-semibold leading-6 text-text-muted">
+              Live mobile viewport for checking navigation, profile, teams, announcements,
+              and admin flows before sending the app link to squad members.
+            </p>
+            <a
+              href={appRoot}
+              className="mt-4 inline-flex h-10 items-center justify-center rounded-lg border border-gold/35 bg-gold px-4 text-xs font-black uppercase tracking-widest text-background transition hover:bg-white"
+            >
+              Open App
+            </a>
           </div>
-          <div className="h-[844px] w-[390px] max-h-[calc(100vh-120px)] max-w-[calc(100vw-24px)] overflow-hidden rounded-[38px] border-[10px] border-[#0b1324] bg-background shadow-[0_28px_90px_rgba(0,0,0,0.55),0_0_0_1px_rgba(242,196,83,0.28)]">
+          <div className="h-[844px] w-[390px] max-h-[calc(100vh-190px)] max-w-[calc(100vw-24px)] overflow-hidden rounded-[38px] border-[10px] border-[#0b1324] bg-background shadow-[0_28px_90px_rgba(0,0,0,0.55),0_0_0_1px_rgba(242,196,83,0.28)]">
             <iframe
               src={appRoot}
               title="Royal Supremacy phone preview"

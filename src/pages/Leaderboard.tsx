@@ -211,9 +211,9 @@ export function LeaderboardCommandBoard({
           <p className="mt-5 text-[10px] font-black uppercase tracking-[0.34em] text-blue-100">
             Royal Supremacy
           </p>
-          <h1 className="mt-1 font-display text-3xl font-black uppercase text-white mlbb-title sm:text-5xl">
+          <h2 className="mt-1 font-display text-3xl font-black uppercase text-white mlbb-title sm:text-5xl">
             Royal Supremacy Leaderboard
-          </h1>
+          </h2>
           <div className="mt-4 rounded-lg border border-gold/30 bg-background/60 px-5 py-3">
             <p className="font-display text-lg font-black uppercase tracking-wider text-gold">
               {subtitle}

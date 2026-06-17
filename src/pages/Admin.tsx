@@ -82,6 +82,59 @@ type AdminTeamDragState = {
   height: number;
 };
 
+type AdminLockedGateProps = {
+  password: string;
+  accessError: string;
+  onPasswordChange: (password: string) => void;
+  onSubmit: React.FormEventHandler<HTMLFormElement>;
+};
+
+export function AdminLockedGate({
+  password,
+  accessError,
+  onPasswordChange,
+  onSubmit,
+}: AdminLockedGateProps) {
+  return (
+    <Card className="mx-auto mt-16 max-w-md p-8 text-center">
+      <ShieldAlert size={48} className="mx-auto mb-6 text-gold" />
+      <h1 className="font-display text-2xl font-black uppercase text-white">
+        Admin Portal
+      </h1>
+      <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
+        Enter the local MVP password to unlock roster assignment and admin tools.
+      </p>
+      <form className="mt-8 space-y-4" onSubmit={onSubmit}>
+        <div className="space-y-2 text-left">
+          <Label htmlFor="admin-portal-password">Portal Password</Label>
+          <div className="relative">
+            <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+            <Input
+              id="admin-portal-password"
+              name="adminPassword"
+              type="password"
+              value={password}
+              onChange={(event) => onPasswordChange(event.target.value)}
+              autoComplete="current-password"
+              aria-label="Admin Portal password"
+              className="pl-11"
+            />
+          </div>
+        </div>
+        {accessError && (
+          <div className="rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs font-black uppercase tracking-widest text-danger">
+            {accessError}
+          </div>
+        )}
+        <Button variant="gold" className="w-full gap-2">
+          <LockKeyhole size={16} />
+          Unlock Admin Portal
+        </Button>
+      </form>
+    </Card>
+  );
+}
+
 type UpdateMythicRanksModalProps = {
   isOpen: boolean;
   members: Member[];
@@ -559,6 +612,12 @@ export default function Admin() {
   };
 
   const handleArchiveTeam = (teamId: string) => {
+    const team = activeTeams.find((entry) => entry.id === teamId);
+    const confirmed = window.confirm(
+      `Delete ${team?.name ?? "this team"}? Members assigned to it will move to Unassigned.`,
+    );
+    if (!confirmed) return;
+
     const result = archiveTeam(teamId);
     setTeamMessage(
       result.ok
@@ -624,6 +683,11 @@ export default function Admin() {
   };
 
   const handleDeleteAnnouncement = (announcementId: string) => {
+    const confirmed = window.confirm(
+      "Delete this announcement from the active feed? Saved users can still see their saved copy until they unsave it.",
+    );
+    if (!confirmed) return;
+
     const result = softDeleteAnnouncement(announcements, announcementId, isAdmin);
     if (result.ok) {
       setAnnouncements(result.announcements);
@@ -697,39 +761,12 @@ export default function Admin() {
 
   if (!isAdmin) {
     return (
-      <Card className="mx-auto mt-16 max-w-md p-8 text-center">
-        <ShieldAlert size={48} className="mx-auto mb-6 text-gold" />
-        <h1 className="font-display text-2xl font-black uppercase text-white">
-          Admin Portal
-        </h1>
-        <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
-          Enter the local MVP password to unlock roster assignment and admin tools.
-        </p>
-        <form className="mt-8 space-y-4" onSubmit={unlockPortal}>
-          <div className="space-y-2 text-left">
-            <Label>Portal Password</Label>
-            <div className="relative">
-              <LockKeyhole className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
-              <Input
-                type="password"
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                autoComplete="current-password"
-                className="pl-11"
-              />
-            </div>
-          </div>
-          {accessError && (
-            <div className="rounded-lg border border-danger/25 bg-danger/10 p-3 text-xs font-black uppercase tracking-widest text-danger">
-              {accessError}
-            </div>
-          )}
-          <Button variant="gold" className="w-full gap-2">
-            <LockKeyhole size={16} />
-            Unlock Admin Portal
-          </Button>
-        </form>
-      </Card>
+      <AdminLockedGate
+        password={password}
+        accessError={accessError}
+        onPasswordChange={setPassword}
+        onSubmit={unlockPortal}
+      />
     );
   }
 
@@ -845,7 +882,16 @@ export default function Admin() {
               Reset local roster, announcements, tryouts, and notifications while
               preserving the current auth account.
             </p>
-            <Button variant="danger" className="mt-6 gap-2" onClick={resetData}>
+            <Button
+              variant="danger"
+              className="mt-6 gap-2"
+              onClick={() => {
+                const confirmed = window.confirm(
+                  "Reset local MVP data? This restores seeded roster, announcements, tryouts, teams, RP, and rank history.",
+                );
+                if (confirmed) resetData();
+              }}
+            >
               <Trash2 size={18} />
               Reset MVP Data
             </Button>

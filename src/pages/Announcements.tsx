@@ -229,7 +229,7 @@ export default function Announcements() {
                   <img
                     src={imageSrc}
                     alt={announcement.imageName || announcement.title}
-                    className="aspect-[4/3] w-full object-cover"
+                    className="aspect-[16/11] w-full object-cover sm:aspect-video"
                   />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-32 bg-gradient-to-t from-background/95 to-transparent" />
                 </div>

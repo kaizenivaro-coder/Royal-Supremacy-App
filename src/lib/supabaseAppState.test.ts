@@ -1,6 +1,15 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { normalizeRemoteAppState } from "./supabaseAppState.ts";
+import {
+  normalizeRemoteAppState,
+  reconcileRemoteAppState,
+} from "./supabaseAppState.ts";
+import {
+  ACTIVE_SEASON,
+  createSeedMembers,
+  createSeedRankHistory,
+  createSeedRpTransactions,
+} from "../data/leaderboardSeed.ts";
 import type { Member } from "../types";
 
 const member = {
@@ -31,4 +40,54 @@ test("normalizeRemoteAppState keeps valid remote MVP state and fills missing opt
 test("normalizeRemoteAppState rejects data without a members list", () => {
   assert.equal(normalizeRemoteAppState({ announcements: [] }), null);
   assert.equal(normalizeRemoteAppState(null), null);
+});
+
+test("reconcileRemoteAppState repairs stale partial remote state with seeded squad data", () => {
+  const seedMembers = createSeedMembers();
+  const fallback = {
+    members: seedMembers,
+    announcements: [],
+    tryouts: [],
+    notifications: [],
+    squadLogoSrc: "",
+    seasons: [ACTIVE_SEASON],
+    teams: [],
+    rpTransactions: createSeedRpTransactions(),
+    rankHistory: createSeedRankHistory(),
+  };
+  const staleKingChoou = {
+    ...seedMembers[0],
+    mlbbId: "1473749667",
+    serverId: "6704",
+  };
+
+  const reconciled = reconcileRemoteAppState(
+    {
+      ...fallback,
+      members: [
+        staleKingChoou,
+        {
+          ...member,
+          id: "member_boshleaf",
+          username: "boshleaf",
+          playerName: "boshleaf",
+        },
+      ],
+      seasons: [],
+      rpTransactions: [],
+      rankHistory: [],
+    },
+    fallback,
+  );
+
+  assert.equal(reconciled.members.length, seedMembers.length);
+  assert.ok(reconciled.members.some((entry) => entry.username === "kingvoid"));
+  assert.equal(
+    reconciled.members.find((entry) => entry.username === "kingchoou")?.mlbbId,
+    "1473749667",
+  );
+  assert.equal(reconciled.members.some((entry) => entry.username === "boshleaf"), false);
+  assert.ok(reconciled.rpTransactions.length > 0);
+  assert.ok(reconciled.rankHistory.length > 0);
+  assert.equal(reconciled.seasons[0]?.id, ACTIVE_SEASON.id);
 });

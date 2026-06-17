@@ -2,7 +2,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { UpdateMythicRanksModal } from "./Admin.tsx";
+import { AdminLockedGate, UpdateMythicRanksModal } from "./Admin.tsx";
 import { mockMembers } from "../data/mock.ts";
 
 test("update mythic ranks modal renders focused admin controls for every rank", () => {
@@ -27,4 +27,20 @@ test("update mythic ranks modal renders focused admin controls for every rank", 
   assert.match(html, /Save Rank Updates/);
   assert.match(html, /backdrop-blur-sm/);
   assert.match(html, /type="number"/);
+});
+
+test("admin locked gate exposes an accessible password field", () => {
+  const html = renderToStaticMarkup(
+    React.createElement(AdminLockedGate, {
+      password: "",
+      accessError: "",
+      onPasswordChange: () => undefined,
+      onSubmit: () => undefined,
+    }),
+  );
+
+  assert.match(html, /for="admin-portal-password"/);
+  assert.match(html, /id="admin-portal-password"/);
+  assert.match(html, /name="adminPassword"/);
+  assert.match(html, /aria-label="Admin Portal password"/);
 });

@@ -24,6 +24,87 @@ export type RemoteAppState = {
   rankHistory: RankHistory[];
 };
 
+function getMemberIdentity(member: Member) {
+  return [
+    member.id,
+    member.username,
+    member.normalizedName,
+    member.playerName?.toLowerCase().replace(/[^a-z0-9]+/g, ""),
+  ].filter(Boolean);
+}
+
+function findRemoteMember(seedMember: Member, remoteMembers: Member[]) {
+  const seedIdentities = new Set(getMemberIdentity(seedMember));
+  return remoteMembers.find((member) =>
+    getMemberIdentity(member).some((identity) => seedIdentities.has(identity)),
+  );
+}
+
+function mergeSeedRoster(remoteMembers: Member[], fallbackMembers: Member[]) {
+  const seedMatches = fallbackMembers.filter((member) =>
+    findRemoteMember(member, remoteMembers),
+  ).length;
+  const remoteIsStalePartialRoster =
+    fallbackMembers.length > 0 &&
+    seedMatches < Math.min(5, Math.ceil(fallbackMembers.length * 0.25));
+
+  if (remoteIsStalePartialRoster) {
+    return fallbackMembers.map((seedMember) => {
+      const remoteMember = findRemoteMember(seedMember, remoteMembers);
+      return remoteMember
+        ? {
+            ...seedMember,
+            ...remoteMember,
+            id: seedMember.id,
+            username: seedMember.username,
+            normalizedName: seedMember.normalizedName,
+          }
+        : seedMember;
+    });
+  }
+
+  const mergedMembers = [...remoteMembers];
+  fallbackMembers.forEach((seedMember) => {
+    if (!findRemoteMember(seedMember, mergedMembers)) {
+      mergedMembers.push(seedMember);
+    }
+  });
+  return mergedMembers;
+}
+
+function mergeById<T extends { id: string }>(remoteItems: T[], fallbackItems: T[]) {
+  const mergedItems = [...remoteItems];
+  const remoteIds = new Set(remoteItems.map((item) => item.id));
+
+  fallbackItems.forEach((fallbackItem) => {
+    if (!remoteIds.has(fallbackItem.id)) {
+      mergedItems.push(fallbackItem);
+    }
+  });
+
+  return mergedItems;
+}
+
+export function reconcileRemoteAppState(
+  remoteState: RemoteAppState,
+  fallbackState: RemoteAppState,
+): RemoteAppState {
+  return {
+    members: mergeSeedRoster(remoteState.members, fallbackState.members),
+    announcements: mergeById(remoteState.announcements, fallbackState.announcements),
+    tryouts: mergeById(remoteState.tryouts, fallbackState.tryouts),
+    notifications: remoteState.notifications,
+    squadLogoSrc: remoteState.squadLogoSrc || fallbackState.squadLogoSrc,
+    seasons: mergeById(remoteState.seasons, fallbackState.seasons),
+    teams: mergeById(remoteState.teams, fallbackState.teams),
+    rpTransactions: mergeById(
+      remoteState.rpTransactions,
+      fallbackState.rpTransactions,
+    ),
+    rankHistory: mergeById(remoteState.rankHistory, fallbackState.rankHistory),
+  };
+}
+
 export function normalizeRemoteAppState(value: unknown): RemoteAppState | null {
   if (!value || typeof value !== "object") {
     return null;
