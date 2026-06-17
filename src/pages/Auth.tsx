@@ -26,6 +26,28 @@ interface AuthLocationState {
 
 const splashImage = publicAsset("auth/royal-login-splash.jpg");
 
+export function getAuthCredentialFieldPolicy(isSignup: boolean) {
+  return {
+    form: {
+      autoComplete: "off",
+    },
+    identifier: {
+      id: isSignup ? "royal-signup-handle" : "royal-login-handle",
+      name: isSignup ? "royal-signup-handle" : "royal-login-handle",
+      autoComplete: "off",
+      "data-lpignore": "true",
+      "data-1p-ignore": "true",
+    },
+    password: {
+      id: isSignup ? "royal-signup-passphrase" : "royal-login-passphrase",
+      name: isSignup ? "royal-signup-passphrase" : "royal-login-passphrase",
+      autoComplete: "new-password",
+      "data-lpignore": "true",
+      "data-1p-ignore": "true",
+    },
+  } as const;
+}
+
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [identifier, setIdentifier] = useState("");
@@ -41,11 +63,13 @@ export default function Auth() {
     return `${from?.pathname ?? "/"}${from?.search ?? ""}`;
   }, [location.state]);
   const isSignup = mode === "signup";
+  const credentialPolicy = getAuthCredentialFieldPolicy(isSignup);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setError("");
     setIdentifier("");
+    setPassword("");
   };
 
   const handleIdentifierChange = (value: string) => {
@@ -65,6 +89,7 @@ export default function Auth() {
 
     if (!result.ok) {
       setError(result.error ?? "Authentication failed.");
+      setPassword("");
       return;
     }
 
@@ -151,18 +176,26 @@ export default function Auth() {
                   </button>
                 </div>
 
-                <form className="space-y-5" onSubmit={handleSubmit} data-testid="auth-form">
+                <form
+                  className="space-y-5"
+                  onSubmit={handleSubmit}
+                  data-testid="auth-form"
+                  autoComplete={credentialPolicy.form.autoComplete}
+                >
                   <div>
-                    <Label htmlFor="identifier">
+                    <Label htmlFor={credentialPolicy.identifier.id}>
                       {isSignup ? "Username" : "Username or Email"}
                     </Label>
                     <div className="relative">
                       <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
                       <Input
-                        id="identifier"
+                        id={credentialPolicy.identifier.id}
+                        name={credentialPolicy.identifier.name}
                         value={identifier}
                         onChange={(event) => handleIdentifierChange(event.target.value)}
-                        autoComplete="username"
+                        autoComplete={credentialPolicy.identifier.autoComplete}
+                        data-lpignore={credentialPolicy.identifier["data-lpignore"]}
+                        data-1p-ignore={credentialPolicy.identifier["data-1p-ignore"]}
                         autoCapitalize="none"
                         spellCheck={false}
                         className="h-[52px] pl-11"
@@ -171,15 +204,18 @@ export default function Auth() {
                   </div>
 
                   <div>
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor={credentialPolicy.password.id}>Password</Label>
                     <div className="relative">
                       <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
                       <Input
-                        id="password"
+                        id={credentialPolicy.password.id}
+                        name={credentialPolicy.password.name}
                         type="password"
                         value={password}
                         onChange={(event) => setPassword(event.target.value)}
-                        autoComplete={isSignup ? "new-password" : "current-password"}
+                        autoComplete={credentialPolicy.password.autoComplete}
+                        data-lpignore={credentialPolicy.password["data-lpignore"]}
+                        data-1p-ignore={credentialPolicy.password["data-1p-ignore"]}
                         className="h-[52px] pl-11"
                       />
                     </div>
