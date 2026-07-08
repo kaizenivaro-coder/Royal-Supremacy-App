@@ -1,13 +1,13 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import {
-  Activity,
-  Bell,
   FileEdit,
   LayoutDashboard,
   LogOut,
   Megaphone,
   Menu,
   MapPinned,
+  PanelLeftClose,
+  PanelLeftOpen,
   Shield,
   Trophy,
   UserCircle,
@@ -36,6 +36,8 @@ type SidebarContentProps = {
   squadLogoSrc: string;
   onNavigate?: () => void;
   onLogout: () => void;
+  collapsed?: boolean;
+  onToggleCollapsed?: () => void;
 };
 
 function SidebarContent({
@@ -44,12 +46,14 @@ function SidebarContent({
   squadLogoSrc,
   onNavigate,
   onLogout,
+  collapsed = false,
+  onToggleCollapsed,
 }: SidebarContentProps) {
   return (
     <>
-      <div className="hidden items-center gap-3 border-b border-blue-200/10 p-6 text-gold lg:flex">
+      <div className={cn("hidden h-[88px] items-center border-b border-blue-200/10 text-gold lg:flex", collapsed ? "justify-center px-3" : "gap-3 px-5")}>
         <SquadLogoPlaceholder src={squadLogoSrc} className="h-9 w-9 shrink-0" />
-        <div className="flex flex-col uppercase">
+        <div className={cn("flex flex-1 flex-col uppercase", collapsed && "hidden")}>
           <span className="font-display text-lg font-black leading-tight tracking-[0.18em] text-gold mlbb-title">
             Royal
           </span>
@@ -57,10 +61,11 @@ function SidebarContent({
             Supremacy
           </span>
         </div>
+        {onToggleCollapsed ? <button type="button" onClick={onToggleCollapsed} aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"} title={collapsed ? "Expand sidebar" : "Collapse sidebar"} className="grid h-9 w-9 shrink-0 place-items-center rounded-lg border border-blue-200/10 text-text-muted transition hover:border-gold/30 hover:bg-white/5 hover:text-gold">{collapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}</button> : null}
       </div>
 
-      <nav className="mt-16 space-y-1 p-4 lg:mt-0">
-        <div className="mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted/60">
+      <nav className={cn("mt-16 space-y-1 lg:mt-0", collapsed ? "p-2" : "p-4")}>
+        <div className={cn("mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted/60", collapsed && "sr-only")}>
           MVP Command
         </div>
         {navItems.map((item) => {
@@ -72,8 +77,11 @@ function SidebarContent({
               key={item.name}
               to={item.path}
               onClick={onNavigate}
+              title={collapsed ? item.name : undefined}
+              aria-label={item.name}
               className={cn(
-                "group flex items-center gap-3 rounded-lg border px-3 py-2.5 text-sm font-semibold transition-all duration-200",
+                "group flex items-center rounded-lg border py-2.5 text-sm font-semibold transition-all duration-200",
+                collapsed ? "justify-center px-2" : "gap-3 px-3",
                 isActive
                   ? "border-gold/30 bg-gold/10 text-gold shadow-[0_0_18px_rgba(242,196,83,0.1)]"
                   : "border-transparent text-text-muted hover:border-blue-200/10 hover:bg-surface-hover hover:text-white",
@@ -85,13 +93,14 @@ function SidebarContent({
                   isActive ? "text-gold" : "opacity-70 group-hover:opacity-100",
                 )}
               />
-              {item.name}
+              <span className={cn(collapsed && "sr-only")}>{item.name}</span>
             </NavLink>
           );
         })}
       </nav>
 
-      <div className="absolute bottom-8 left-4 right-4 rounded-lg border border-gold/15 bg-background/70 p-4">
+      <div className={cn("absolute bottom-8 rounded-lg border border-gold/15 bg-background/70", collapsed ? "left-2 right-2 p-2" : "left-4 right-4 p-4")}>
+        {collapsed ? <button type="button" onClick={onLogout} aria-label="Sign out" title="Sign out" className="grid h-10 w-full place-items-center rounded-lg text-text-muted transition hover:bg-white/5 hover:text-white"><LogOut className="h-4 w-4" /></button> : <>
         <div className="mb-2 flex items-center gap-3">
           <div className="h-2 w-2 rounded-full bg-success" />
           <span className="text-[10px] font-black uppercase tracking-widest text-text-muted">
@@ -107,6 +116,7 @@ function SidebarContent({
           <LogOut className="h-3.5 w-3.5" />
           Sign Out
         </button>
+        </>}
       </div>
     </>
   );
@@ -114,14 +124,21 @@ function SidebarContent({
 
 export default function RootLayout() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() =>
+    localStorage.getItem("royal_supremacy_sidebar_collapsed") === "true",
+  );
   const location = useLocation();
-  const { members, authUser, logout, notifications, squadLogoSrc } = useAppStore();
-  const activePage = navItems.find((item) => item.path === location.pathname);
-  const activeMembers = members.filter((member) => member.status === "Active").length;
+  const { authUser, logout, squadLogoSrc } = useAppStore();
   const commanderName = authUser?.username ?? "Commander";
-  const currentMember = members.find((member) => member.username === authUser?.username) ?? members[0];
 
   const toggleMenu = () => setMobileMenuOpen(!mobileMenuOpen);
+  const toggleDesktopSidebar = () => {
+    setDesktopSidebarCollapsed((current) => {
+      const next = !current;
+      localStorage.setItem("royal_supremacy_sidebar_collapsed", String(next));
+      return next;
+    });
+  };
 
   return (
     <div className="flex min-h-screen bg-background text-text-white">
@@ -160,64 +177,18 @@ export default function RootLayout() {
         </aside>
       )}
 
-      <aside className="relative hidden h-screen w-64 overflow-y-auto border-r border-white/5 bg-surface lg:block">
+      <aside className={cn("relative hidden h-screen shrink-0 overflow-y-auto border-r border-white/5 bg-surface transition-[width] duration-300 lg:block", desktopSidebarCollapsed ? "w-20" : "w-64")}>
         <SidebarContent
           pathname={location.pathname}
           commanderName={commanderName}
           squadLogoSrc={squadLogoSrc}
           onLogout={logout}
+          collapsed={desktopSidebarCollapsed}
+          onToggleCollapsed={toggleDesktopSidebar}
         />
       </aside>
 
       <main className="min-h-screen w-full flex-1 pt-16 lg:pt-0">
-        <div className="sticky top-0 z-30 hidden border-b border-gold/15 bg-background/88 backdrop-blur-xl lg:block">
-          <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-8 py-4">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-gold">
-                Royal Supremacy MVP
-              </p>
-              <h2 className="font-display text-2xl font-black uppercase text-white mlbb-title">
-                {activePage?.name || "Command Center"}
-              </h2>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="min-w-32 rounded-lg border border-blue-200/10 bg-surface/80 px-4 py-3">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  <Activity size={13} className="text-success" />
-                  Members
-                </div>
-                <div className="text-lg font-black text-white">
-                  {activeMembers}/{members.length}
-                </div>
-              </div>
-              <div className="min-w-36 rounded-lg border border-blue-200/10 bg-surface/80 px-4 py-3">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  <Shield size={13} className="text-gold" />
-                  Team
-                </div>
-                <div className="truncate text-sm font-black text-white">
-                  {currentMember?.team ?? "Unassigned"}
-                </div>
-              </div>
-              <div className="min-w-32 rounded-lg border border-blue-200/10 bg-surface/80 px-4 py-3">
-                <div className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  <Bell size={13} className="text-gold" />
-                  Alerts
-                </div>
-                <div className="text-lg font-black text-white">{notifications.length}</div>
-              </div>
-              <button
-                type="button"
-                onClick={logout}
-                aria-label="Sign out"
-                className="flex h-[68px] items-center justify-center gap-2 rounded-lg border border-gold/20 bg-gold/10 px-4 text-[10px] font-black uppercase tracking-wider text-gold transition hover:border-gold/45 hover:bg-gold/15"
-              >
-                <LogOut className="h-4 w-4" />
-                Sign Out
-              </button>
-            </div>
-          </div>
-        </div>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>

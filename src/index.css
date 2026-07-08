@@ -80,7 +80,42 @@
   }
 
   .hero-token {
-    @apply border border-gold/40 bg-background/70 shadow-lg;
+    @apply border-[3px] bg-background/70 shadow-lg;
     box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 18px rgba(242,196,83,0.14);
+  }
+
+  .strategy-token-unassigned { border-color: #f2c453; }
+  .strategy-token-blue { border-color: #4ca8ff; box-shadow: 0 0 18px rgba(76,168,255,.42); }
+  .strategy-token-red { border-color: #ff5668; box-shadow: 0 0 18px rgba(255,86,104,.42); }
+
+  .strategy-token-moving {
+    animation: strategy-token-pulse 1s ease-in-out infinite;
+  }
+
+  .strategy-route {
+    fill: none;
+    stroke-width: 2.5;
+    stroke-linecap: round;
+    stroke-dasharray: 5 3;
+    opacity: .85;
+    filter: drop-shadow(0 0 3px currentColor);
+  }
+  .strategy-route-unassigned { color: #f2c453; stroke: #f2c453; }
+  .strategy-route-blue { color: #4ca8ff; stroke: #4ca8ff; }
+  .strategy-route-red { color: #ff5668; stroke: #ff5668; }
+  .strategy-route-preview { animation: strategy-route-flow .8s linear infinite; }
+
+  @keyframes strategy-token-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: .38; }
+  }
+
+  @keyframes strategy-route-flow {
+    to { stroke-dashoffset: -8; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .strategy-token-moving { animation: none; filter: brightness(1.25); }
+    .strategy-route-preview { animation: none; }
   }
 }

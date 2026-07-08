@@ -146,4 +146,14 @@ export interface StrategyPlacement {
   updatedBy: string;
   createdAt: string;
   updatedAt: string;
+  label?: string;
+  teamColor?: "unassigned" | "blue" | "red";
+  movementRoute?: StrategyMovementRoute;
+}
+
+export interface StrategyMovementRoute {
+  startXPercent: number;
+  startYPercent: number;
+  endXPercent: number;
+  endYPercent: number;
 }

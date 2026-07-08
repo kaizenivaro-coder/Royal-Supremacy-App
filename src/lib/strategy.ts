@@ -27,19 +27,12 @@ export function placeStrategyHero(
   placements: StrategyPlacement[],
   input: PlaceHeroInput,
 ) {
-  if (placements.some((placement) => placement.heroId === input.heroId)) {
-    return {
-      placements,
-      error: `${input.heroName} is already on this map.`,
-    };
-  }
-
   const now = input.now ?? new Date().toISOString();
   return {
     placements: [
       ...placements,
       {
-        id: `strategy_${input.heroId}_${Date.now()}`,
+        id: createStrategyPlacementId(input.heroId),
         heroId: input.heroId,
         heroName: input.heroName,
         xPercent: clampPercent(input.xPercent),
@@ -48,9 +41,50 @@ export function placeStrategyHero(
         updatedBy: input.actorUsername,
         createdAt: now,
         updatedAt: now,
+        teamColor: "unassigned" as const,
       },
     ],
   };
+}
+
+function createStrategyPlacementId(heroId: string) {
+  return `strategy_${heroId}_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
+export function updateStrategyPlacement(
+  placements: StrategyPlacement[],
+  placementId: string,
+  updates: Partial<Pick<StrategyPlacement, "label" | "teamColor" | "movementRoute">>,
+) {
+  return placements.map((placement) =>
+    placement.id === placementId
+      ? { ...placement, ...updates, updatedAt: new Date().toISOString() }
+      : placement,
+  );
+}
+
+export function duplicateStrategyPlacement(
+  placements: StrategyPlacement[],
+  placementId: string,
+  actorUsername: string,
+) {
+  const source = placements.find((placement) => placement.id === placementId);
+  if (!source) return placements;
+  const now = new Date().toISOString();
+  return [
+    ...placements,
+    {
+      ...source,
+      id: createStrategyPlacementId(source.heroId),
+      xPercent: clampPercent(source.xPercent + 3),
+      yPercent: clampPercent(source.yPercent + 3),
+      movementRoute: undefined,
+      createdBy: actorUsername,
+      updatedBy: actorUsername,
+      createdAt: now,
+      updatedAt: now,
+    },
+  ];
 }
 
 export function moveStrategyPlacement(
