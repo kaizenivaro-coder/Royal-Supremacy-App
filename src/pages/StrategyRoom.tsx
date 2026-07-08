@@ -140,13 +140,13 @@ export default function StrategyRoom() {
 
           <div
             ref={boardRef}
-            className={`strategy-board relative aspect-[4/3] overflow-hidden rounded-lg border ${canEdit ? "border-gold/35" : "border-blue-200/15"} bg-background shadow-2xl`}
+            className={`strategy-board relative aspect-video overflow-hidden rounded-lg border ${canEdit ? "border-gold/35" : "border-blue-200/15"} bg-background shadow-2xl`}
             onDragOver={(event) => { if (canEdit) event.preventDefault(); }}
             onDrop={(event) => { event.preventDefault(); addHero(event.dataTransfer.getData("text/hero-id"), event.clientX, event.clientY); }}
             onClick={(event) => { if (selectedHeroId) addHero(selectedHeroId, event.clientX, event.clientY); }}
           >
-            <img src={`${import.meta.env.BASE_URL}strategy/tactical-map.svg`} alt="Three-lane tactical battlefield" className="absolute inset-0 h-full w-full select-none object-cover" draggable={false} />
-            <div className="pointer-events-none absolute inset-0 bg-black/10" />
+            <img src={`${import.meta.env.BASE_URL}strategy/mlbb-sanctum-island-map.jpg`} alt="Mobile Legends Sanctum Island battlefield" className="absolute inset-0 h-full w-full select-none object-cover" draggable={false} />
+            <div className="pointer-events-none absolute inset-0 bg-black/15" />
             {placements.map((placement) => (
               <button
                 key={placement.id}
