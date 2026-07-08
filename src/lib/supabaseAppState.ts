@@ -5,6 +5,7 @@ import type {
   RankHistory,
   RpTransaction,
   Season,
+  StrategyPlacement,
   Team,
   Tryout,
 } from "../types";
@@ -22,6 +23,8 @@ export type RemoteAppState = {
   teams: Team[];
   rpTransactions: RpTransaction[];
   rankHistory: RankHistory[];
+  publicStrategyPlacements: StrategyPlacement[];
+  strategyEditorUsernames: string[];
 };
 
 function getMemberIdentity(member: Member) {
@@ -102,6 +105,8 @@ export function reconcileRemoteAppState(
       fallbackState.rpTransactions,
     ),
     rankHistory: mergeById(remoteState.rankHistory, fallbackState.rankHistory),
+    publicStrategyPlacements: remoteState.publicStrategyPlacements,
+    strategyEditorUsernames: remoteState.strategyEditorUsernames,
   };
 }
 
@@ -125,6 +130,12 @@ export function normalizeRemoteAppState(value: unknown): RemoteAppState | null {
     teams: Array.isArray(data.teams) ? data.teams : [],
     rpTransactions: Array.isArray(data.rpTransactions) ? data.rpTransactions : [],
     rankHistory: Array.isArray(data.rankHistory) ? data.rankHistory : [],
+    publicStrategyPlacements: Array.isArray(data.publicStrategyPlacements)
+      ? data.publicStrategyPlacements
+      : [],
+    strategyEditorUsernames: Array.isArray(data.strategyEditorUsernames)
+      ? data.strategyEditorUsernames.filter((username): username is string => typeof username === "string")
+      : [],
   };
 }
 

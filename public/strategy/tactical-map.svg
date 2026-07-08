@@ -1,0 +1,38 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+  <title id="title">Royal Supremacy tactical battlefield</title>
+  <desc id="desc">A top-down three-lane battlefield with jungle, river, bases and objectives.</desc>
+  <defs>
+    <pattern id="grid" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M60 0H0V60" fill="none" stroke="#8ac7ff" stroke-opacity=".055"/></pattern>
+    <filter id="glow"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="1200" height="900" fill="#061221"/>
+  <path d="M0 715 360 475 835 315 1200 100V0H0Z" fill="#102b27"/>
+  <path d="M0 900V715l360-240 475-160 365-215v800Z" fill="#13251f"/>
+  <path d="M-80 760 1260 35" stroke="#173c61" stroke-width="118" opacity=".9"/>
+  <path d="M-80 760 1260 35" stroke="#54a5d8" stroke-width="7" opacity=".45"/>
+  <g fill="none" stroke="#c6a24b" stroke-width="35" opacity=".46">
+    <path d="M90 790C325 770 560 680 760 535S1040 240 1115 105"/>
+    <path d="M95 800C275 650 405 550 600 450S925 250 1110 90"/>
+    <path d="M90 785C170 620 315 400 500 300S900 125 1110 95"/>
+  </g>
+  <g fill="none" stroke="#f4d36f" stroke-width="4" opacity=".75">
+    <path d="M90 790C325 770 560 680 760 535S1040 240 1115 105"/>
+    <path d="M95 800C275 650 405 550 600 450S925 250 1110 90"/>
+    <path d="M90 785C170 620 315 400 500 300S900 125 1110 95"/>
+  </g>
+  <g fill="#17412e" stroke="#286747" stroke-width="3" opacity=".95">
+    <circle cx="250" cy="565" r="78"/><circle cx="400" cy="680" r="62"/><circle cx="430" cy="365" r="74"/>
+    <circle cx="760" cy="590" r="68"/><circle cx="830" cy="215" r="72"/><circle cx="980" cy="335" r="62"/>
+  </g>
+  <g filter="url(#glow)">
+    <circle cx="455" cy="605" r="34" fill="#0b1b2d" stroke="#5bbcff" stroke-width="7"/><circle cx="760" cy="295" r="34" fill="#0b1b2d" stroke="#e5b640" stroke-width="7"/>
+    <path d="m95 720 72 42-15 83H55l-15-83Z" fill="#0c3261" stroke="#61bfff" stroke-width="8"/>
+    <path d="m1105 55 72 42-15 83h-97l-15-83Z" fill="#593016" stroke="#f3bf4e" stroke-width="8"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-size="25" font-weight="700" letter-spacing="4" fill="#d7e9ff" opacity=".68">
+    <text x="230" y="128">EXP LANE</text><text x="515" y="500">MID LANE</text><text x="815" y="780">GOLD LANE</text>
+    <text x="392" y="660">TURTLE</text><text x="710" y="250">LORD</text>
+  </g>
+  <rect width="1200" height="900" fill="url(#grid)"/>
+  <rect x="8" y="8" width="1184" height="884" rx="18" fill="none" stroke="#d3a83c" stroke-width="8" opacity=".72"/>
+</svg>

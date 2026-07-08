@@ -17,6 +17,7 @@ import Profile from "./pages/Profile";
 import MobilePreview from "./pages/MobilePreview";
 import PausedFeature from "./pages/PausedFeature";
 import Leaderboard from "./pages/Leaderboard";
+import StrategyRoom from "./pages/StrategyRoom";
 
 const routerBasename =
   import.meta.env.BASE_URL === "/"
@@ -59,6 +60,7 @@ export default function App() {
             <Route path="matches" element={<PausedFeature featureName="Matches" />} />
             <Route path="points" element={<PausedFeature featureName="Paused MVP Section" />} />
             <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="strategy" element={<StrategyRoom />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="tryouts" element={<Tryouts />} />
             <Route path="admin" element={<Admin />} />

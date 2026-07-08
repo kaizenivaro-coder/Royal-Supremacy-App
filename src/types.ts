@@ -135,3 +135,15 @@ export interface RankHistory {
   recordedAt: string;
   createdAt: string;
 }
+
+export interface StrategyPlacement {
+  id: string;
+  heroId: string;
+  heroName: string;
+  xPercent: number;
+  yPercent: number;
+  createdBy: string;
+  updatedBy: string;
+  createdAt: string;
+  updatedAt: string;
+}

@@ -54,6 +54,8 @@ test("reconcileRemoteAppState repairs stale partial remote state with seeded squ
     teams: [],
     rpTransactions: createSeedRpTransactions(),
     rankHistory: createSeedRankHistory(),
+    publicStrategyPlacements: [],
+    strategyEditorUsernames: [],
   };
   const staleKingChoou = {
     ...seedMembers[0],

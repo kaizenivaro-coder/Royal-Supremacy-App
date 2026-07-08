@@ -8,6 +8,7 @@ import type {
   RpSourceType,
   RpTransaction,
   Season,
+  StrategyPlacement,
   Team,
   Tryout,
 } from "../types";
@@ -61,6 +62,9 @@ interface AppState {
   teams: Team[];
   rpTransactions: RpTransaction[];
   rankHistory: RankHistory[];
+  publicStrategyPlacements: StrategyPlacement[];
+  privateStrategyPlacementsByUser: Record<string, StrategyPlacement[]>;
+  strategyEditorUsernames: string[];
   isAdmin: boolean;
   authUser: AuthUser | null;
 }
@@ -84,6 +88,9 @@ interface AppContextType extends AppState {
   setTeams: (teams: Team[]) => void;
   setRpTransactions: (transactions: RpTransaction[]) => void;
   setRankHistory: (rankHistory: RankHistory[]) => void;
+  setPublicStrategyPlacements: (placements: StrategyPlacement[]) => void;
+  setPrivateStrategyPlacements: (username: string, placements: StrategyPlacement[]) => void;
+  setStrategyEditorUsernames: (usernames: string[]) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
@@ -119,6 +126,9 @@ const defaultState: AppState = {
   teams: createDefaultTeams(),
   rpTransactions: createSeedRpTransactions(),
   rankHistory: createSeedRankHistory(),
+  publicStrategyPlacements: [],
+  privateStrategyPlacementsByUser: {},
+  strategyEditorUsernames: [],
   isAdmin: false,
   authUser: null,
 };
@@ -135,6 +145,9 @@ const activeDataKeys = [
   "teams",
   "rpTransactions",
   "rankHistory",
+  "publicStrategyPlacements",
+  "privateStrategyPlacementsByUser",
+  "strategyEditorUsernames",
   "isAdmin",
 ];
 
@@ -167,6 +180,8 @@ function writeAppStateSnapshot(state: RemoteAppState) {
   writeStorage("teams", state.teams);
   writeStorage("rpTransactions", state.rpTransactions);
   writeStorage("rankHistory", state.rankHistory);
+  writeStorage("publicStrategyPlacements", state.publicStrategyPlacements);
+  writeStorage("strategyEditorUsernames", state.strategyEditorUsernames);
 }
 
 function createFallbackAppState(authUser: AuthUser | null): RemoteAppState {
@@ -180,6 +195,8 @@ function createFallbackAppState(authUser: AuthUser | null): RemoteAppState {
     teams: defaultState.teams,
     rpTransactions: defaultState.rpTransactions,
     rankHistory: defaultState.rankHistory,
+    publicStrategyPlacements: defaultState.publicStrategyPlacements,
+    strategyEditorUsernames: defaultState.strategyEditorUsernames,
   };
 }
 
@@ -272,6 +289,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       teams: readStorage("teams", localFallbackState.teams),
       rpTransactions: readStorage("rpTransactions", localFallbackState.rpTransactions),
       rankHistory: readStorage("rankHistory", localFallbackState.rankHistory),
+      publicStrategyPlacements: readStorage(
+        "publicStrategyPlacements",
+        localFallbackState.publicStrategyPlacements,
+      ),
+      strategyEditorUsernames: readStorage(
+        "strategyEditorUsernames",
+        localFallbackState.strategyEditorUsernames,
+      ),
     },
     localFallbackState,
   );
@@ -302,6 +327,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [rankHistory, setRankHistoryState] = useState<RankHistory[]>(
     initialLocalAppState.rankHistory,
   );
+  const [publicStrategyPlacements, setPublicStrategyPlacementsState] = useState<StrategyPlacement[]>(
+    initialLocalAppState.publicStrategyPlacements,
+  );
+  const [privateStrategyPlacementsByUser, setPrivateStrategyPlacementsByUserState] = useState<Record<string, StrategyPlacement[]>>(
+    readStorage("privateStrategyPlacementsByUser", {}),
+  );
+  const [strategyEditorUsernames, setStrategyEditorUsernamesState] = useState<string[]>(
+    initialLocalAppState.strategyEditorUsernames,
+  );
   const [isAdmin, setIsAdminState] = useState<boolean>(
     readStorage("isAdmin", defaultState.isAdmin),
   );
@@ -328,6 +362,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTeamsState(hydratedState.teams);
         setRpTransactionsState(hydratedState.rpTransactions);
         setRankHistoryState(hydratedState.rankHistory);
+        setPublicStrategyPlacementsState(hydratedState.publicStrategyPlacements);
+        setStrategyEditorUsernamesState(hydratedState.strategyEditorUsernames);
         writeAppStateSnapshot(hydratedState);
       }
 
@@ -363,6 +399,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         teams,
         rpTransactions,
         rankHistory,
+        publicStrategyPlacements,
+        strategyEditorUsernames,
       });
     }, 700);
 
@@ -377,10 +415,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     members,
     notifications,
     rankHistory,
+    publicStrategyPlacements,
     rpTransactions,
     seasons,
     squadLogoSrc,
     teams,
+    strategyEditorUsernames,
     tryouts,
   ]);
 
@@ -422,6 +462,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setRankHistory = (nextRankHistory: RankHistory[]) => {
     setRankHistoryState(nextRankHistory);
     writeStorage("rankHistory", nextRankHistory);
+  };
+
+  const setPublicStrategyPlacements = (placements: StrategyPlacement[]) => {
+    setPublicStrategyPlacementsState(placements);
+    writeStorage("publicStrategyPlacements", placements);
+  };
+
+  const setPrivateStrategyPlacements = (username: string, placements: StrategyPlacement[]) => {
+    const normalizedUsername = username.trim().toLowerCase();
+    setPrivateStrategyPlacementsByUserState((current) => {
+      const next = { ...current, [normalizedUsername]: placements };
+      writeStorage("privateStrategyPlacementsByUser", next);
+      return next;
+    });
+  };
+
+  const setStrategyEditorUsernames = (usernames: string[]) => {
+    setStrategyEditorUsernamesState(usernames);
+    writeStorage("strategyEditorUsernames", usernames);
   };
 
   const setIsAdmin = (nextIsAdmin: boolean) => {
@@ -734,6 +793,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTeamsState(defaultState.teams);
     setRpTransactionsState(defaultState.rpTransactions);
     setRankHistoryState(defaultState.rankHistory);
+    setPublicStrategyPlacementsState(defaultState.publicStrategyPlacements);
+    setPrivateStrategyPlacementsByUserState(defaultState.privateStrategyPlacementsByUser);
+    setStrategyEditorUsernamesState(defaultState.strategyEditorUsernames);
     setIsAdminState(defaultState.isAdmin);
     writeStorage("members", nextMembers);
     writeStorage("announcements", defaultState.announcements);
@@ -744,6 +806,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeStorage("teams", defaultState.teams);
     writeStorage("rpTransactions", defaultState.rpTransactions);
     writeStorage("rankHistory", defaultState.rankHistory);
+    writeStorage("publicStrategyPlacements", defaultState.publicStrategyPlacements);
+    writeStorage("privateStrategyPlacementsByUser", defaultState.privateStrategyPlacementsByUser);
+    writeStorage("strategyEditorUsernames", defaultState.strategyEditorUsernames);
   };
 
   return (
@@ -758,6 +823,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         teams,
         rpTransactions,
         rankHistory,
+        publicStrategyPlacements,
+        privateStrategyPlacementsByUser,
+        strategyEditorUsernames,
         isAdmin,
         authUser,
         setMembers,
@@ -768,6 +836,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setTeams,
         setRpTransactions,
         setRankHistory,
+        setPublicStrategyPlacements,
+        setPrivateStrategyPlacements,
+        setStrategyEditorUsernames,
         setIsAdmin,
         login,
         signup,
