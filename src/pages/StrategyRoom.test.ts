@@ -37,4 +37,6 @@ test("movement overlay renders saved and preview routes", () => {
   assert.match(html, /strategy-route-blue/);
   assert.match(html, /strategy-route-red/);
   assert.match(html, /marker-end/);
+  assert.match(html, /polyline/);
+  assert.match(html, /10,20 80,60/);
 });

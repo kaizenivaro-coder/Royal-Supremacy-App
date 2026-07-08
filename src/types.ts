@@ -156,4 +156,10 @@ export interface StrategyMovementRoute {
   startYPercent: number;
   endXPercent: number;
   endYPercent: number;
+  points?: StrategyRoutePoint[];
+}
+
+export interface StrategyRoutePoint {
+  xPercent: number;
+  yPercent: number;
 }

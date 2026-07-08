@@ -1,4 +1,8 @@
-import type { StrategyPlacement } from "../types";
+import type {
+  StrategyMovementRoute,
+  StrategyPlacement,
+  StrategyRoutePoint,
+} from "../types";
 
 const normalizeUsername = (username: string) => username.trim().toLowerCase();
 const clampPercent = (value: number) => Math.min(100, Math.max(0, value));
@@ -85,6 +89,47 @@ export function duplicateStrategyPlacement(
       updatedAt: now,
     },
   ];
+}
+
+export function getStrategyRoutePoints(route: StrategyMovementRoute) {
+  if (Array.isArray(route.points) && route.points.length >= 2) {
+    return route.points;
+  }
+  return [
+    { xPercent: route.startXPercent, yPercent: route.startYPercent },
+    { xPercent: route.endXPercent, yPercent: route.endYPercent },
+  ];
+}
+
+export function createStrategyMovementRoute(
+  points: StrategyRoutePoint[],
+): StrategyMovementRoute {
+  const safePoints = points.length >= 2 ? points : [
+    points[0] ?? { xPercent: 50, yPercent: 50 },
+    points[0] ?? { xPercent: 50, yPercent: 50 },
+  ];
+  const start = safePoints[0]!;
+  const end = safePoints.at(-1)!;
+  return {
+    startXPercent: clampPercent(start.xPercent),
+    startYPercent: clampPercent(start.yPercent),
+    endXPercent: clampPercent(end.xPercent),
+    endYPercent: clampPercent(end.yPercent),
+    points: safePoints.map((point) => ({
+      xPercent: clampPercent(point.xPercent),
+      yPercent: clampPercent(point.yPercent),
+    })),
+  };
+}
+
+export function getRenderableStrategyRoutes(placements: StrategyPlacement[]) {
+  return placements.flatMap((placement) => placement.movementRoute
+    ? [{
+        id: placement.id,
+        teamColor: placement.teamColor ?? "unassigned" as const,
+        route: placement.movementRoute,
+      }]
+    : []);
 }
 
 export function moveStrategyPlacement(

@@ -3,6 +3,9 @@ import test from "node:test";
 import {
   canEditPublicStrategy,
   duplicateStrategyPlacement,
+  createStrategyMovementRoute,
+  getRenderableStrategyRoutes,
+  getStrategyRoutePoints,
   moveStrategyPlacement,
   placeStrategyHero,
   removeStrategyPlacement,
@@ -65,6 +68,45 @@ test("placements support labels, team outlines, movement routes, and duplication
   assert.notEqual(duplicated[1]?.id, updated.id);
   assert.equal(duplicated[1]?.xPercent, 43);
   assert.equal(duplicated[1]?.movementRoute, undefined);
+});
+
+test("movement routes normalize legacy endpoints and preserve chained points", () => {
+  const legacy = {
+    startXPercent: 10,
+    startYPercent: 20,
+    endXPercent: 80,
+    endYPercent: 70,
+  };
+  assert.deepEqual(getStrategyRoutePoints(legacy), [
+    { xPercent: 10, yPercent: 20 },
+    { xPercent: 80, yPercent: 70 },
+  ]);
+
+  const chained = createStrategyMovementRoute([
+    { xPercent: 10, yPercent: 20 },
+    { xPercent: 45, yPercent: 30 },
+    { xPercent: 80, yPercent: 70 },
+  ]);
+  assert.equal(chained.points?.length, 3);
+  assert.equal(chained.endXPercent, 80);
+});
+
+test("renderable routes cannot outlive their owning hero", () => {
+  const placed = placeStrategyHero([], {
+    heroId: "chou",
+    heroName: "Chou",
+    xPercent: 20,
+    yPercent: 30,
+    actorUsername: "kingchoou",
+  }).placements[0]!;
+  const route = createStrategyMovementRoute([
+    { xPercent: 20, yPercent: 30 },
+    { xPercent: 60, yPercent: 70 },
+  ]);
+  const withRoute = updateStrategyPlacement([placed], placed.id, { movementRoute: route });
+
+  assert.equal(getRenderableStrategyRoutes(withRoute).length, 1);
+  assert.equal(getRenderableStrategyRoutes(removeStrategyPlacement(withRoute, placed.id)).length, 0);
 });
 
 test("placements can be moved and removed without mutating the source list", () => {
