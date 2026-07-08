@@ -11,28 +11,27 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     env:
-      SUPABASE_URL: "https://sjzmuegqldknoxddvzda.supabase.co"
-      SUPABASE_PUBLISHABLE_KEY: "sb_publishable_jOGdQdaFEWNusmR9AM2btA_Vm8qomJX"
+      SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+      SUPABASE_PUBLISHABLE_KEY: ${{ secrets.VITE_SUPABASE_PUBLISHABLE_KEY }}
 
     steps:
       - name: Validate Supabase configuration
         run: |
-          if [ -z "$SUPABASE_URL" ]; then
-            echo "Missing repository variable: VITE_SUPABASE_URL"
-            exit 1
-          fi
-
-          if [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
-            echo "Missing repository secret: VITE_SUPABASE_PUBLISHABLE_KEY"
-            exit 1
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_PUBLISHABLE_KEY" ]; then
+            echo "Supabase is not configured. Website will run in local fallback mode."
+            echo "Add VITE_SUPABASE_URL as a repository variable and"
+            echo "VITE_SUPABASE_PUBLISHABLE_KEY as a repository secret after restoring the project."
+            exit 0
           fi
 
       - name: Ping app state table
+        if: ${{ env.SUPABASE_URL != '' && env.SUPABASE_PUBLISHABLE_KEY != '' }}
         run: |
           set -euo pipefail
 
           CLEAN_URL="${SUPABASE_URL%/}"
           STATUS_CODE="$(curl --silent --show-error --output /tmp/supabase_keepalive.json --write-out "%{http_code}" \
+            --retry 4 --retry-delay 5 --retry-all-errors \
             "${CLEAN_URL}/rest/v1/mvp_app_state?select=id&id=eq.royal-supremacy&limit=1" \
             -H "apikey: ${SUPABASE_PUBLISHABLE_KEY}" \
             -H "Authorization: Bearer ${SUPABASE_PUBLISHABLE_KEY}")"
