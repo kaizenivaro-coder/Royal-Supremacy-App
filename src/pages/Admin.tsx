@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
   Bell,
+  CheckCircle2,
   Crown,
   Database,
   Gem,
@@ -16,6 +17,7 @@ import {
   Trophy,
   Upload,
   UserPlus,
+  XCircle,
 } from "lucide-react";
 import { useAppStore } from "../data/store";
 import {
@@ -377,6 +379,9 @@ export default function Admin() {
     rpTransactions,
     rankHistory,
     setRankHistory,
+    pendingAccountRequests,
+    approveAccountRequest,
+    rejectAccountRequest,
     updateMythicRanks,
     addRpTransaction,
     resetSeason,
@@ -403,6 +408,7 @@ export default function Admin() {
   const [rankCommandMessage, setRankCommandMessage] = useState("");
   const [rpTransactionError, setRpTransactionError] = useState("");
   const [teamMessage, setTeamMessage] = useState("");
+  const [accountRequestMessage, setAccountRequestMessage] = useState("");
   const [teamDragState, setTeamDragState] = useState<AdminTeamDragState | null>(null);
   const [teamDropTarget, setTeamDropTarget] = useState<string | null>(null);
   const teamDropRefs = useRef<Record<string, HTMLDivElement | null>>({});
@@ -633,6 +639,24 @@ export default function Admin() {
     const result = archiveMember(memberId, "Left squad");
     setAssignmentMessage(
       result.ok ? "Member archived." : result.error ?? "Could not archive member.",
+    );
+  };
+
+  const handleApproveAccountRequest = (requestId: string, username: string) => {
+    const result = approveAccountRequest(requestId);
+    setAccountRequestMessage(
+      result.ok
+        ? `${username} can now log in.`
+        : result.error ?? "Could not approve account.",
+    );
+  };
+
+  const handleRejectAccountRequest = (requestId: string, username: string) => {
+    const result = rejectAccountRequest(requestId);
+    setAccountRequestMessage(
+      result.ok
+        ? `${username} request rejected.`
+        : result.error ?? "Could not reject account.",
     );
   };
 
@@ -871,6 +895,75 @@ export default function Admin() {
                   )}
                 </div>
               </div>
+            </div>
+          </Card>
+
+          <Card className="p-6">
+            <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <h2 className="flex items-center gap-2 font-display text-xl font-black uppercase text-white">
+                  <UserPlus size={20} className="text-gold" />
+                  Account Requests
+                </h2>
+                <p className="mt-2 text-sm font-semibold leading-6 text-text-muted">
+                  Approve new signup requests before they can enter the app.
+                </p>
+              </div>
+              <span className="rounded-full border border-gold/25 bg-gold/10 px-3 py-1 text-[10px] font-black uppercase tracking-widest text-gold">
+                {pendingAccountRequests.length} pending
+              </span>
+            </div>
+            {accountRequestMessage && (
+              <div className="mb-4 rounded-lg border border-gold/25 bg-gold/10 p-3 text-xs font-black uppercase tracking-widest text-gold">
+                {accountRequestMessage}
+              </div>
+            )}
+            <div className="space-y-3">
+              {pendingAccountRequests.length > 0 ? (
+                pendingAccountRequests.map((request) => (
+                  <div
+                    key={request.id}
+                    className="grid gap-3 rounded-lg border border-blue-200/10 bg-background/45 p-4 sm:grid-cols-[1fr_auto]"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-black text-white">
+                        @{request.username}
+                      </p>
+                      <p className="mt-1 text-[10px] font-black uppercase tracking-widest text-text-muted">
+                        Requested {new Date(request.requestedAt).toLocaleString()}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap gap-2">
+                      <Button
+                        type="button"
+                        variant="gold"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleApproveAccountRequest(request.id, request.username)}
+                      >
+                        <CheckCircle2 size={14} />
+                        Approve
+                      </Button>
+                      <Button
+                        type="button"
+                        variant="danger"
+                        size="sm"
+                        className="gap-2"
+                        onClick={() => handleRejectAccountRequest(request.id, request.username)}
+                      >
+                        <XCircle size={14} />
+                        Reject
+                      </Button>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="rounded-lg border border-dashed border-blue-200/10 bg-background/35 p-5 text-center">
+                  <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                    No account requests waiting
+                  </p>
+                </div>
+              )}
             </div>
           </Card>
 

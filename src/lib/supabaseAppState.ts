@@ -9,6 +9,8 @@ import type {
   Team,
   Tryout,
 } from "../types";
+import type { LocalAuthAccount, PendingAccountRequest } from "./localAuth";
+import { LEGACY_SEED_AUTH_ACCOUNT_IDS } from "../data/leaderboardSeed";
 import { isSupabaseConfigured, supabase } from "./supabaseClient";
 
 export const SUPABASE_APP_STATE_ID = "royal-supremacy";
@@ -25,6 +27,8 @@ export type RemoteAppState = {
   rankHistory: RankHistory[];
   publicStrategyPlacements: StrategyPlacement[];
   strategyEditorUsernames: string[];
+  pendingAccountRequests: PendingAccountRequest[];
+  authAccounts: LocalAuthAccount[];
 };
 
 function getMemberIdentity(member: Member) {
@@ -88,12 +92,21 @@ function mergeById<T extends { id: string }>(remoteItems: T[], fallbackItems: T[
   return mergedItems;
 }
 
+function clearLegacySeedAuthLinks(members: Member[]) {
+  const legacySeedIds = new Set(LEGACY_SEED_AUTH_ACCOUNT_IDS);
+  return members.map((member) =>
+    member.authUserId && legacySeedIds.has(member.authUserId)
+      ? { ...member, authUserId: undefined }
+      : member,
+  );
+}
+
 export function reconcileRemoteAppState(
   remoteState: RemoteAppState,
   fallbackState: RemoteAppState,
 ): RemoteAppState {
   return {
-    members: mergeSeedRoster(remoteState.members, fallbackState.members),
+    members: clearLegacySeedAuthLinks(mergeSeedRoster(remoteState.members, fallbackState.members)),
     announcements: mergeById(remoteState.announcements, fallbackState.announcements),
     tryouts: mergeById(remoteState.tryouts, fallbackState.tryouts),
     notifications: remoteState.notifications,
@@ -107,6 +120,8 @@ export function reconcileRemoteAppState(
     rankHistory: mergeById(remoteState.rankHistory, fallbackState.rankHistory),
     publicStrategyPlacements: remoteState.publicStrategyPlacements,
     strategyEditorUsernames: remoteState.strategyEditorUsernames,
+    pendingAccountRequests: remoteState.pendingAccountRequests,
+    authAccounts: mergeById(remoteState.authAccounts, fallbackState.authAccounts),
   };
 }
 
@@ -135,6 +150,28 @@ export function normalizeRemoteAppState(value: unknown): RemoteAppState | null {
       : [],
     strategyEditorUsernames: Array.isArray(data.strategyEditorUsernames)
       ? data.strategyEditorUsernames.filter((username): username is string => typeof username === "string")
+      : [],
+    pendingAccountRequests: Array.isArray(data.pendingAccountRequests)
+      ? data.pendingAccountRequests.filter(
+          (request): request is PendingAccountRequest =>
+            Boolean(request) &&
+            typeof request === "object" &&
+            typeof (request as PendingAccountRequest).id === "string" &&
+            typeof (request as PendingAccountRequest).username === "string" &&
+            typeof (request as PendingAccountRequest).passwordHash === "string" &&
+            typeof (request as PendingAccountRequest).requestedAt === "string",
+        )
+      : [],
+    authAccounts: Array.isArray(data.authAccounts)
+      ? data.authAccounts.filter(
+          (account): account is LocalAuthAccount =>
+            Boolean(account) &&
+            typeof account === "object" &&
+            typeof (account as LocalAuthAccount).id === "string" &&
+            typeof (account as LocalAuthAccount).username === "string" &&
+            typeof (account as LocalAuthAccount).passwordHash === "string" &&
+            typeof (account as LocalAuthAccount).createdAt === "string",
+        )
       : [],
   };
 }

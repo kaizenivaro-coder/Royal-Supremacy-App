@@ -4,6 +4,7 @@ import {
   ACTIVE_SEASON,
   LEADERBOARD_MEMBER_SEEDS,
   SEED_AUTH_CREDENTIALS,
+  createSeedMembers,
   createSeedRankHistory,
   createSeedRpTransactions,
 } from "../data/leaderboardSeed.ts";
@@ -162,17 +163,29 @@ test("new member starting average ignores negative RP scores", () => {
   );
 });
 
-test("seed account credentials use normalized usernames with username1234 passwords", () => {
-  assert.equal(SEED_AUTH_CREDENTIALS.length, LEADERBOARD_MEMBER_SEEDS.length);
+test("seed account credentials only include the owner account", () => {
+  assert.equal(SEED_AUTH_CREDENTIALS.length, 1);
+  assert.equal(SEED_AUTH_CREDENTIALS[0]?.displayName, "King Choou");
+  assert.equal(SEED_AUTH_CREDENTIALS[0]?.username, "kingchoou");
+  assert.equal(SEED_AUTH_CREDENTIALS[0]?.password, "Toxic0303#");
   assert.ok(SEED_AUTH_CREDENTIALS.every((account) => /^[a-z0-9_]{3,20}$/.test(account.username)));
-  assert.ok(
-    SEED_AUTH_CREDENTIALS.every(
-      (account) => account.password === `${account.username}1234`,
-    ),
-  );
+  assert.ok(LEADERBOARD_MEMBER_SEEDS.length > SEED_AUTH_CREDENTIALS.length);
   assert.notEqual(
-    SEED_AUTH_CREDENTIALS.find((account) => account.displayName === "monarch")?.username,
+    "kingchoou",
     SEED_AUTH_CREDENTIALS.find((account) => account.displayName === "ΔMonarch™")?.username,
+  );
+});
+
+test("seed members only link King Choou to a seeded auth account", () => {
+  const members = createSeedMembers();
+
+  assert.equal(
+    members.find((member) => member.username === "kingchoou")?.authUserId,
+    "auth_kingchoou",
+  );
+  assert.equal(
+    members.filter((member) => member.authUserId).length,
+    1,
   );
 });
 

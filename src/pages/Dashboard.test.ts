@@ -53,16 +53,15 @@ test("dashboard analytics are derived from active MVP data", () => {
     rpTransactions: createSeedRpTransactions(),
     rankHistory: createSeedRankHistory(),
     activeSeasonId: ACTIVE_SEASON.id,
-    pendingTryoutsCount: 1,
   });
 
   assert.deepEqual(
     cards.map((card) => card.label),
-    ["Current RP", "Mythic Stars", "Pending Tryouts"],
+    ["Current RP", "Mythic Stars", "Active Members"],
   );
   assert.deepEqual(
     cards.map((card) => card.value),
-    ["388", "57", "1"],
+    ["388", "57", "21"],
   );
   assert.equal(cards.some((card) => /coming soon|local mvp/i.test(card.value)), false);
 });

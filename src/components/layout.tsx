@@ -11,7 +11,6 @@ import {
   Shield,
   Trophy,
   UserCircle,
-  UserPlus,
   X,
 } from "lucide-react";
 import { useState } from "react";
@@ -26,7 +25,6 @@ const navItems = [
   { name: "Leaderboard", path: "/leaderboard", icon: Trophy },
   { name: "Strategy Room", path: "/strategy", icon: MapPinned },
   { name: "Announcements", path: "/announcements", icon: Megaphone },
-  { name: "Tryouts", path: "/tryouts", icon: UserPlus },
   { name: "Admin Portal", path: "/admin", icon: FileEdit },
 ];
 
@@ -65,9 +63,6 @@ function SidebarContent({
       </div>
 
       <nav className={cn("mt-16 space-y-1 lg:mt-0", collapsed ? "p-2" : "p-4")}>
-        <div className={cn("mb-4 px-3 text-xs font-semibold uppercase tracking-wider text-text-muted/60", collapsed && "sr-only")}>
-          MVP Command
-        </div>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
@@ -177,7 +172,7 @@ export default function RootLayout() {
         </aside>
       )}
 
-      <aside className={cn("relative hidden h-screen shrink-0 overflow-y-auto border-r border-white/5 bg-surface transition-[width] duration-300 lg:block", desktopSidebarCollapsed ? "w-20" : "w-64")}>
+      <aside className={cn("fixed inset-y-0 left-0 z-40 hidden h-screen shrink-0 overflow-y-auto border-r border-white/5 bg-surface transition-[width] duration-300 lg:block", desktopSidebarCollapsed ? "w-20" : "w-64")}>
         <SidebarContent
           pathname={location.pathname}
           commanderName={commanderName}
@@ -188,7 +183,7 @@ export default function RootLayout() {
         />
       </aside>
 
-      <main className="min-h-screen w-full flex-1 pt-16 lg:pt-0">
+      <main className={cn("min-h-screen w-full flex-1 pt-16 transition-[padding-left] duration-300 lg:pt-0", desktopSidebarCollapsed ? "lg:pl-20" : "lg:pl-64")}>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>

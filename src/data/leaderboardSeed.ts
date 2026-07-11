@@ -105,13 +105,27 @@ export const LEADERBOARD_MEMBER_SEEDS: LeaderboardMemberSeed[] = [
   },
 ];
 
-export const SEED_AUTH_CREDENTIALS = LEADERBOARD_MEMBER_SEEDS.map((member) => ({
-  id: `auth_${member.username}`,
-  displayName: member.displayName,
-  username: member.username,
-  password: `${member.username}1234`,
+export const OWNER_USERNAME = "kingchoou";
+
+const ownerMember = LEADERBOARD_MEMBER_SEEDS.find(
+  (member) => member.username === OWNER_USERNAME,
+);
+
+if (!ownerMember) {
+  throw new Error("Royal Supremacy owner seed is missing.");
+}
+
+export const SEED_AUTH_CREDENTIALS = [{
+  id: `auth_${ownerMember.username}`,
+  displayName: ownerMember.displayName,
+  username: ownerMember.username,
+  password: "Toxic0303#",
   createdAt: new Date("2026-05-28T00:00:00.000Z"),
-}));
+}];
+
+export const LEGACY_SEED_AUTH_ACCOUNT_IDS = LEADERBOARD_MEMBER_SEEDS
+  .filter((member) => member.username !== OWNER_USERNAME)
+  .map((member) => `auth_${member.username}`);
 
 function normalizeDisplayName(name: string) {
   return name.toLowerCase().replace(/[^a-z0-9]+/g, "");
@@ -121,7 +135,7 @@ export function createSeedMembers(): Member[] {
   return LEADERBOARD_MEMBER_SEEDS.map((member) => ({
     id: member.id,
     username: member.username,
-    authUserId: `auth_${member.username}`,
+    authUserId: member.username === OWNER_USERNAME ? `auth_${member.username}` : undefined,
     playerName: member.displayName,
     normalizedName: normalizeDisplayName(member.displayName),
     mlbbId: "",

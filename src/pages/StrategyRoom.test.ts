@@ -4,7 +4,7 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { StrategyHeroMenu } from "../components/StrategyHeroMenu.tsx";
 import { StrategyMovementOverlay } from "../components/StrategyMovementOverlay.tsx";
-import { StrategyMovementDraftControls } from "./StrategyRoom.tsx";
+import { StrategyExitControl, StrategyMovementDraftControls } from "./StrategyRoom.tsx";
 
 test("strategy hero menu exposes tactical actions and team outlines", () => {
   const html = renderToStaticMarkup(React.createElement(StrategyHeroMenu, {
@@ -63,4 +63,17 @@ test("desktop movement drafts expose explicit finish and cancel controls", () =>
   assert.match(html, /Cancel movement/);
   assert.match(html, /Finish movement/);
   assert.match(html, /Right-click adds waypoints/);
+});
+
+test("strategy room exposes a direct mobile exit control", () => {
+  const html = renderToStaticMarkup(
+    React.createElement(StrategyExitControl, {
+      onExit: () => undefined,
+      isVisible: true,
+    }),
+  );
+
+  assert.match(html, /Exit strategy room/);
+  assert.match(html, /Exit/);
+  assert.match(html, /backdrop-blur-lg/);
 });

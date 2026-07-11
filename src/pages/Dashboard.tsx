@@ -1,13 +1,11 @@
 import { Link } from "react-router-dom";
 import {
-  Activity,
   ArrowLeft,
   Bell,
   Megaphone,
   Shield,
   TrendingUp,
   UserCircle,
-  UserPlus,
   Users,
 } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
@@ -26,14 +24,13 @@ import {
 import { ACTIVE_SEASON } from "../data/leaderboardSeed";
 import type { Announcement, Member, Notification, RankHistory, RpTransaction } from "../types";
 
-export type QuickPanel = "announcements" | "teams" | "tryouts" | "profile" | "notify";
+export type QuickPanel = "announcements" | "teams" | "profile" | "notify";
 
 const QUICK_PANEL_TRANSITION_MS = 200;
 
 const quickActions = [
   { id: "announcements", label: "Announcements", icon: Megaphone },
   { id: "teams", label: "Teams", icon: Users },
-  { id: "tryouts", label: "Tryouts", icon: UserPlus },
   { id: "profile", label: "Profile", icon: UserCircle },
 ] satisfies { id: QuickPanel; label: string; icon: typeof Megaphone }[];
 
@@ -43,7 +40,6 @@ type DashboardAnalyticsInput = {
   rpTransactions: RpTransaction[];
   rankHistory: RankHistory[];
   activeSeasonId: string;
-  pendingTryoutsCount: number;
 };
 
 export function createDashboardAnalyticsCards({
@@ -52,7 +48,6 @@ export function createDashboardAnalyticsCards({
   rpTransactions,
   rankHistory,
   activeSeasonId,
-  pendingTryoutsCount,
 }: DashboardAnalyticsInput) {
   const activeMembers = getActiveMembers(members);
   const memberRefs = activeMembers.map((member) => ({
@@ -88,10 +83,10 @@ export function createDashboardAnalyticsCards({
       icon: Shield,
     },
     {
-      label: "Pending Tryouts",
-      value: String(pendingTryoutsCount),
-      detail: `${activeMembers.length} active members`,
-      icon: Activity,
+      label: "Active Members",
+      value: String(activeMembers.length),
+      detail: "Current squad roster",
+      icon: Users,
     },
   ];
 }
@@ -101,7 +96,6 @@ type DashboardQuickActionDialogProps = {
   isVisible: boolean;
   latestAnnouncements: Announcement[];
   teamGroups: ReturnType<typeof groupMembersByTeam>;
-  pendingTryoutsCount: number;
   currentMember: Member | undefined;
   authUsername: string | undefined;
   notifications: Notification[];
@@ -118,10 +112,6 @@ const quickPanelCopy: Record<QuickPanel, { title: string; description: string }>
     title: "Teams",
     description: "Current MVP roster groups and assignment counts.",
   },
-  tryouts: {
-    title: "Tryouts",
-    description: "Pending player files that need review.",
-  },
   profile: {
     title: "Profile",
     description: "Your account identity, banner, roles, and heroes.",
@@ -137,7 +127,6 @@ export function DashboardQuickActionDialog({
   isVisible,
   latestAnnouncements,
   teamGroups,
-  pendingTryoutsCount,
   currentMember,
   authUsername,
   notifications,
@@ -251,26 +240,6 @@ export function DashboardQuickActionDialog({
             </div>
           )}
 
-          {panel === "tryouts" && (
-            <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
-              <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                Active Tryout Files
-              </p>
-              <p className="mt-3 text-5xl font-black text-white">
-                {pendingTryoutsCount}
-              </p>
-              <p className="mt-3 text-sm font-medium leading-6 text-text-muted">
-                These are the current MVP tryout records waiting on review,
-                trial, or test-match decisions.
-              </p>
-              <Link to="/tryouts" onClick={onClose}>
-                <Button variant="gold" className="mt-5 w-full">
-                  Open Tryouts
-                </Button>
-              </Link>
-            </div>
-          )}
-
           {panel === "profile" && (
             <div className="rounded-lg border border-blue-200/10 bg-background/50 p-5">
               <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
@@ -313,7 +282,6 @@ export default function Dashboard() {
   const {
     members,
     announcements,
-    tryouts,
     notifications,
     authUser,
     teams,
@@ -345,9 +313,6 @@ export default function Dashboard() {
     () => activeTeams.map((team) => team.name),
     [activeTeams],
   );
-  const pendingTryoutsCount = tryouts.filter((tryout) =>
-    ["Pending", "Trial", "Needs Test Match"].includes(tryout.status),
-  ).length;
   const activeSeasonId =
     seasons.find((season) => season.isActive)?.id ?? ACTIVE_SEASON.id;
   const analyticsCards = createDashboardAnalyticsCards({
@@ -356,7 +321,6 @@ export default function Dashboard() {
     rpTransactions,
     rankHistory,
     activeSeasonId,
-    pendingTryoutsCount,
   });
   const banner = getProfileBanner(currentMember?.bannerId);
 
@@ -445,7 +409,7 @@ export default function Dashboard() {
               Royal Supremacy
             </h1>
             <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-text-muted">
-              Player profile, squad teams, announcements, tryouts, and admin
+              Player profile, squad teams, announcements, and admin
               assignment are ready for the first usable squad build.
             </p>
           </div>
@@ -607,7 +571,6 @@ export default function Dashboard() {
         isVisible={isPanelVisible}
         latestAnnouncements={latestAnnouncements}
         teamGroups={teamGroups}
-        pendingTryoutsCount={pendingTryoutsCount}
         currentMember={currentMember}
         authUsername={authUser?.username}
         notifications={notifications}

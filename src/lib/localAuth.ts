@@ -6,6 +6,13 @@ export interface LocalAuthAccount {
   createdAt: string;
 }
 
+export interface PendingAccountRequest {
+  id: string;
+  username: string;
+  passwordHash: string;
+  requestedAt: string;
+}
+
 export interface AuthUser {
   id: string;
   username: string;
@@ -27,6 +34,47 @@ interface AuthFailure {
 }
 
 export type LocalAuthResult = AuthSuccess | AuthFailure;
+
+interface PendingRequestSuccess {
+  request: PendingAccountRequest;
+  requests: PendingAccountRequest[];
+  error?: undefined;
+}
+
+interface PendingRequestFailure {
+  request?: undefined;
+  requests?: undefined;
+  error: string;
+}
+
+export type PendingAccountRequestResult = PendingRequestSuccess | PendingRequestFailure;
+
+interface ApprovePendingRequestSuccess {
+  account: LocalAuthAccount;
+  accounts: LocalAuthAccount[];
+  requests: PendingAccountRequest[];
+  error?: undefined;
+}
+
+interface PendingRequestActionFailure {
+  account?: undefined;
+  accounts?: undefined;
+  requests?: undefined;
+  error: string;
+}
+
+export type ApprovePendingAccountRequestResult =
+  | ApprovePendingRequestSuccess
+  | PendingRequestActionFailure;
+
+interface RejectPendingRequestSuccess {
+  requests: PendingAccountRequest[];
+  error?: undefined;
+}
+
+export type RejectPendingAccountRequestResult =
+  | RejectPendingRequestSuccess
+  | PendingRequestActionFailure;
 
 export interface CreateAccountOptions {
   id?: string;
@@ -73,6 +121,14 @@ function findAccountByIdentifier(
   return accounts.find((account) =>
     getAccountIdentifiers(account).includes(normalized),
   );
+}
+
+function findPendingRequestByIdentifier(
+  requests: PendingAccountRequest[],
+  identifier: string,
+) {
+  const normalized = normalizeIdentifier(identifier);
+  return requests.find((request) => request.username === normalized);
 }
 
 function toAuthUser(account: LocalAuthAccount): AuthUser {
@@ -183,6 +239,92 @@ export async function createLocalAccount(
     account,
     accounts: nextAccounts,
     user: toAuthUser(account),
+  };
+}
+
+export async function createPendingAccountRequest(
+  requests: PendingAccountRequest[],
+  accounts: LocalAuthAccount[],
+  identifier: string,
+  password: string,
+  options: CreateAccountOptions = {},
+): Promise<PendingAccountRequestResult> {
+  const validationError = validateUsernameForSignup(identifier) ?? validatePassword(password);
+  if (validationError) {
+    return { error: validationError };
+  }
+
+  if (findAccountByIdentifier(accounts, identifier)) {
+    return { error: "That email or username is already in use." };
+  }
+
+  if (findPendingRequestByIdentifier(requests, identifier)) {
+    return { error: "That account request is already waiting for Admin Portal review." };
+  }
+
+  const normalized = normalizeIdentifier(identifier);
+  const id = options.id ?? createAccountId();
+  const request: PendingAccountRequest = {
+    id,
+    username: normalized,
+    passwordHash: await hashPassword(id, password),
+    requestedAt: (options.now ?? new Date()).toISOString(),
+  };
+
+  return {
+    request,
+    requests: [request, ...requests],
+  };
+}
+
+export function approvePendingAccountRequest(
+  requests: PendingAccountRequest[],
+  accounts: LocalAuthAccount[],
+  requestId: string,
+  isAdmin: boolean,
+): ApprovePendingAccountRequestResult {
+  if (!isAdmin) {
+    return { error: "Only Admin Portal users can approve account requests." };
+  }
+
+  const request = requests.find((item) => item.id === requestId);
+  if (!request) {
+    return { error: "Account request not found." };
+  }
+
+  if (findAccountByIdentifier(accounts, request.username)) {
+    return { error: "That account already exists." };
+  }
+
+  const account: LocalAuthAccount = {
+    id: request.id,
+    username: request.username,
+    passwordHash: request.passwordHash,
+    createdAt: new Date().toISOString(),
+  };
+
+  return {
+    account,
+    accounts: [...accounts, account],
+    requests: requests.filter((item) => item.id !== requestId),
+  };
+}
+
+export function rejectPendingAccountRequest(
+  requests: PendingAccountRequest[],
+  requestId: string,
+  isAdmin: boolean,
+): RejectPendingAccountRequestResult {
+  if (!isAdmin) {
+    return { error: "Only Admin Portal users can reject account requests." };
+  }
+
+  if (!requests.some((request) => request.id === requestId)) {
+    return { error: "Account request not found." };
+  }
+
+  return {
+    requests: requests.filter((request) => request.id !== requestId),
   };
 }
 

@@ -4,9 +4,11 @@ import {
   changeAccountPassword,
   connectAccountEmail,
   createLocalAccount,
+  createPendingAccountRequest,
   ensureLocalAccount,
   normalizeIdentifier,
   normalizeUsername,
+  approvePendingAccountRequest,
   verifyLocalCredentials,
 } from "./localAuth.ts";
 
@@ -190,4 +192,50 @@ test("verifyLocalCredentials rejects the wrong password", async () => {
 
   assert.equal(login.error, "Password does not match.");
   assert.equal(login.user, undefined);
+});
+
+test("createPendingAccountRequest stores a signup for admin review without approving access", async () => {
+  const request = await createPendingAccountRequest([], [], "RoyalKnight", "blade", {
+    id: "pending_royalknight",
+    now: new Date("2026-07-11T17:00:00.000Z"),
+  });
+
+  assert.equal(request.error, undefined);
+  assert.equal(request.request?.username, "royalknight");
+  assert.equal(request.requests?.length, 1);
+
+  const login = await verifyLocalCredentials([], "royalknight", "blade");
+  assert.equal(login.error, "No Royal Supremacy account found.");
+});
+
+test("approvePendingAccountRequest creates a usable account only for admins", async () => {
+  const pending = await createPendingAccountRequest([], [], "RoyalKnight", "blade", {
+    id: "pending_royalknight",
+  });
+  assert.ok(pending.requests);
+
+  const denied = approvePendingAccountRequest(
+    pending.requests,
+    [],
+    "pending_royalknight",
+    false,
+  );
+  assert.equal(denied.error, "Only Admin Portal users can approve account requests.");
+
+  const approved = approvePendingAccountRequest(
+    pending.requests,
+    [],
+    "pending_royalknight",
+    true,
+  );
+  assert.equal(approved.error, undefined);
+  assert.equal(approved.accounts?.[0]?.username, "royalknight");
+  assert.equal(approved.requests?.length, 0);
+
+  const login = await verifyLocalCredentials(
+    approved.accounts ?? [],
+    "royalknight",
+    "blade",
+  );
+  assert.equal(login.user?.username, "royalknight");
 });

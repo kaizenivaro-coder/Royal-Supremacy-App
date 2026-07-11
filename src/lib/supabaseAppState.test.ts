@@ -34,6 +34,8 @@ test("normalizeRemoteAppState keeps valid remote MVP state and fills missing opt
   assert.equal(state?.members[0]?.username, "kingchoou");
   assert.deepEqual(state?.tryouts, []);
   assert.deepEqual(state?.notifications, []);
+  assert.deepEqual(state?.pendingAccountRequests, []);
+  assert.deepEqual(state?.authAccounts, []);
   assert.equal(state?.squadLogoSrc, "");
 });
 
@@ -56,6 +58,8 @@ test("reconcileRemoteAppState repairs stale partial remote state with seeded squ
     rankHistory: createSeedRankHistory(),
     publicStrategyPlacements: [],
     strategyEditorUsernames: [],
+    pendingAccountRequests: [],
+    authAccounts: [],
   };
   const staleKingChoou = {
     ...seedMembers[0],
@@ -78,6 +82,22 @@ test("reconcileRemoteAppState repairs stale partial remote state with seeded squ
       seasons: [],
       rpTransactions: [],
       rankHistory: [],
+      pendingAccountRequests: [
+        {
+          id: "pending_royalknight",
+          username: "royalknight",
+          passwordHash: "hash",
+          requestedAt: "2026-07-11T17:00:00.000Z",
+        },
+      ],
+      authAccounts: [
+        {
+          id: "auth_royalknight",
+          username: "royalknight",
+          passwordHash: "hash",
+          createdAt: "2026-07-11T17:00:00.000Z",
+        },
+      ],
     },
     fallback,
   );
@@ -92,4 +112,6 @@ test("reconcileRemoteAppState repairs stale partial remote state with seeded squ
   assert.ok(reconciled.rpTransactions.length > 0);
   assert.ok(reconciled.rankHistory.length > 0);
   assert.equal(reconciled.seasons[0]?.id, ACTIVE_SEASON.id);
+  assert.equal(reconciled.pendingAccountRequests[0]?.username, "royalknight");
+  assert.equal(reconciled.authAccounts[0]?.username, "royalknight");
 });

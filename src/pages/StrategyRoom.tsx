@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { useNavigate } from "react-router-dom";
 import {
+  ArrowLeft,
   Check,
   Eye,
   LockKeyhole,
@@ -127,6 +129,7 @@ function pointsMatch(a: StrategyRoutePoint, b: StrategyRoutePoint) {
 }
 
 export default function StrategyRoom() {
+  const navigate = useNavigate();
   const {
     authUser,
     isAdmin,
@@ -704,6 +707,20 @@ export default function StrategyRoom() {
     setDragPosition(null);
   };
 
+  const exitStrategyRoom = () => {
+    cancelPointerSession();
+    setSelectedHeroId(null);
+    setSelectedPlacementId(null);
+    setMovementDraft(null);
+    setContextMenu(null);
+    setSelectedMotionPath(null);
+    setImmersiveFallback(false);
+    if (document.fullscreenElement) {
+      void document.exitFullscreen().catch(() => undefined);
+    }
+    navigate("/");
+  };
+
   const toggleFullscreen = async () => {
     if (document.fullscreenElement) {
       await document.exitFullscreen();
@@ -965,11 +982,13 @@ export default function StrategyRoom() {
           })}
         </div>
 
+        <StrategyExitControl isVisible={mapImmersive} onExit={exitStrategyRoom} />
+
         <div className="absolute left-1/2 top-3 z-30 flex -translate-x-1/2 whitespace-nowrap rounded-lg border border-white/15 bg-[#071425]/62 p-1 shadow-xl backdrop-blur-xl">
           {(["private", "public"] as Room[]).map((item) => <button key={item} type="button" onClick={() => { setRoom(item); setSelectedPlacementId(null); setSelectedMotionPath(null); setMovementDraft(null); setContextMenu(null); }} className={`inline-flex items-center gap-2 rounded-md px-3 py-2 text-[10px] font-black uppercase transition sm:px-4 ${room === item ? "bg-gold/90 text-black shadow-lg" : "text-white/70 hover:bg-white/10 hover:text-white"}`}>{item === "private" ? <LockKeyhole size={14} /> : <Users size={14} />}{item}</button>)}
         </div>
 
-        <button type="button" onClick={() => void toggleFullscreen()} aria-label={fullscreenControlActive ? "Exit fullscreen" : "Enter fullscreen"} title={fullscreenControlActive ? "Exit fullscreen" : "Enter fullscreen"} className="absolute left-3 top-3 z-30 grid h-10 w-10 place-items-center rounded-lg border border-white/15 bg-black/45 text-white/80 shadow-lg backdrop-blur-lg transition hover:border-gold/45 hover:bg-black/65 hover:text-gold">{fullscreenControlActive ? <Minimize2 size={19} /> : <Maximize2 size={19} />}</button>
+        <button type="button" onClick={() => void toggleFullscreen()} aria-label={fullscreenControlActive ? "Exit fullscreen" : "Enter fullscreen"} title={fullscreenControlActive ? "Exit fullscreen" : "Enter fullscreen"} className={`absolute top-3 z-30 grid h-10 w-10 place-items-center rounded-lg border border-white/15 bg-black/45 text-white/80 shadow-lg backdrop-blur-lg transition hover:border-gold/45 hover:bg-black/65 hover:text-gold ${mapImmersive ? "left-16" : "left-3"}`}>{fullscreenControlActive ? <Minimize2 size={19} /> : <Maximize2 size={19} />}</button>
 
         <div className="strategy-landscape-hint pointer-events-none absolute left-1/2 top-16 z-30 w-[min(82vw,360px)] -translate-x-1/2 rounded-lg border border-gold/25 bg-black/62 px-4 py-3 text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/80 shadow-xl backdrop-blur-xl md:hidden">
           Rotate phone sideways for full strategy view
@@ -1055,6 +1074,29 @@ export default function StrategyRoom() {
 
 function DialogShell({ title, onClose, children }: { title: string; onClose: () => void; children: ReactNode }) {
   return <div className="fixed inset-0 z-[100] grid place-items-center bg-black/75 p-4 backdrop-blur-md" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}><div role="dialog" aria-modal="true" aria-label={title} className="w-full max-w-md space-y-5 rounded-lg border border-gold/25 bg-surface p-5 shadow-2xl"><div className="flex items-center justify-between"><h2 className="font-display text-2xl font-black text-gold">{title}</h2><button type="button" onClick={onClose} aria-label={`Close ${title}`} className="rounded-full p-2 text-text-muted hover:bg-white/5 hover:text-white"><X /></button></div>{children}</div></div>;
+}
+
+export function StrategyExitControl({
+  isVisible,
+  onExit,
+}: {
+  isVisible: boolean;
+  onExit: () => void;
+}) {
+  if (!isVisible) return null;
+
+  return (
+    <button
+      type="button"
+      onClick={onExit}
+      aria-label="Exit strategy room"
+      title="Exit strategy room"
+      className="absolute left-3 top-3 z-40 inline-flex h-10 items-center gap-2 rounded-lg border border-white/15 bg-black/45 px-3 text-[10px] font-black uppercase tracking-wider text-white/85 shadow-lg backdrop-blur-lg transition hover:border-gold/45 hover:bg-black/65 hover:text-gold"
+    >
+      <ArrowLeft size={18} />
+      <span>Exit</span>
+    </button>
+  );
 }
 
 export function StrategyMovementDraftControls({

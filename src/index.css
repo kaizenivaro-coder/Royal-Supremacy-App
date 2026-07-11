@@ -79,6 +79,10 @@
     text-shadow: 0 3px 0 rgba(0,0,0,0.32), 0 0 22px rgba(95,183,255,0.18);
   }
 
+  .auth-request-alert {
+    animation: auth-request-alert-in .28s ease-out both;
+  }
+
   .hero-token {
     @apply border-[3px] bg-background/70 shadow-lg;
     box-shadow: 0 12px 28px rgba(0,0,0,0.35), 0 0 18px rgba(242,196,83,0.14);
@@ -148,7 +152,21 @@
     to { stroke-dashoffset: -8; }
   }
 
+  @keyframes auth-request-alert-in {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scale(.98);
+      filter: blur(4px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      filter: blur(0);
+    }
+  }
+
   @media (prefers-reduced-motion: reduce) {
+    .auth-request-alert { animation: none; }
     .strategy-token-moving { animation: none; filter: brightness(1.25); }
     .strategy-route-preview { animation: none; }
   }

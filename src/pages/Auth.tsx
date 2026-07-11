@@ -1,21 +1,24 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
-  Crown,
   KeyRound,
   LogIn,
   Mail,
   ShieldCheck,
-  Sparkles,
   UserPlus,
 } from "lucide-react";
-import { Button, Input, Label } from "../components/ui";
+import { Input, Label } from "../components/ui";
 import { useAppStore } from "../data/store";
 import { normalizeUsername } from "../lib/localAuth";
 import { publicAsset } from "../lib/publicAssets";
 import { cn } from "../lib/utils";
 
 type AuthMode = "login" | "signup";
+
+interface SignupRequestReceipt {
+  identifier: string;
+  password: string;
+}
 
 interface AuthLocationState {
   from?: {
@@ -25,6 +28,8 @@ interface AuthLocationState {
 }
 
 const splashImage = publicAsset("auth/royal-login-splash.jpg");
+const desktopAuthImage = publicAsset("auth/royal-auth-desktop-fullbleed.png");
+const mobileAuthImage = publicAsset("auth/royal-auth-mobile-fullbleed.png");
 
 export function getAuthCredentialFieldPolicy(isSignup: boolean) {
   return {
@@ -48,11 +53,30 @@ export function getAuthCredentialFieldPolicy(isSignup: boolean) {
   } as const;
 }
 
+export function getAuthSubmitLabel(isSignup: boolean) {
+  return isSignup ? "Sign Up" : "Login";
+}
+
+type LocalAuthStorage = Pick<Storage, "setItem" | "removeItem">;
+
+export function canClearLocalAccountsOnHost(hostname: string) {
+  return ["127.0.0.1", "localhost", "::1", "[::1]"].includes(hostname);
+}
+
+export function clearLocalAuthStorage(storage: LocalAuthStorage) {
+  storage.setItem("royal_supremacy_disable_seed_accounts", "true");
+  storage.setItem("royal_supremacy_auth_accounts", "[]");
+  storage.setItem("royal_supremacy_pendingAccountRequests", "[]");
+  storage.removeItem("royal_supremacy_auth_session");
+  storage.removeItem("royal_supremacy_isAdmin");
+}
+
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [signupReceipt, setSignupReceipt] = useState<SignupRequestReceipt | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { login, signup } = useAppStore();
   const navigate = useNavigate();
@@ -65,9 +89,23 @@ export default function Auth() {
   const isSignup = mode === "signup";
   const credentialPolicy = getAuthCredentialFieldPolicy(isSignup);
 
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get("clearLocalAccounts") !== "1") return;
+
+    if (canClearLocalAccountsOnHost(window.location.hostname)) {
+      clearLocalAuthStorage(window.localStorage);
+      window.location.replace("/auth");
+      return;
+    }
+
+    navigate("/auth", { replace: true });
+  }, [location.search, navigate]);
+
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
     setError("");
+    setSignupReceipt(null);
     setIdentifier("");
     setPassword("");
   };
@@ -80,6 +118,8 @@ export default function Auth() {
     event.preventDefault();
     setError("");
     setIsSubmitting(true);
+    const submittedIdentifier = identifier;
+    const submittedPassword = password;
 
     const result = isSignup
       ? await signup(identifier, password)
@@ -93,68 +133,101 @@ export default function Auth() {
       return;
     }
 
+    if (isSignup) {
+      setSignupReceipt({
+        identifier: normalizeUsername(submittedIdentifier),
+        password: submittedPassword,
+      });
+      setIdentifier("");
+      setPassword("");
+      return;
+    }
+
     navigate(redirectPath, { replace: true });
   };
 
   return (
-    <div className="min-h-screen overflow-hidden bg-background text-text-white">
-      <main className="relative min-h-screen px-4 py-6 sm:px-8 lg:px-10">
-        <div className="absolute inset-0 pointer-events-none bg-[radial-gradient(circle_at_20%_20%,rgba(242,196,83,0.14),transparent_32%),radial-gradient(circle_at_84%_30%,rgba(95,183,255,0.16),transparent_28%)]" />
-        <div className="relative mx-auto grid min-h-[calc(100vh-3rem)] w-full max-w-6xl min-w-0 grid-cols-1 items-center gap-5 lg:grid-cols-[1.05fr_0.95fr]">
-          <section className="order-2 hidden min-h-[520px] overflow-hidden border border-gold/25 bg-surface/80 shadow-2xl shadow-black/40 lg:block">
-            <div className="relative h-full min-h-[520px]">
-              <img
-                src={splashImage}
-                alt="Mobile Legends Chou splash art"
-                className="absolute inset-0 h-full w-full object-cover object-center"
-              />
-              <div className="absolute inset-0 bg-gradient-to-r from-background/30 via-transparent to-background/80" />
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/10 to-transparent" />
-              <div className="relative z-10 flex h-full flex-col justify-end p-8">
-                <div className="max-w-sm border-l-2 border-gold pl-5">
-                  <p className="text-[10px] font-black uppercase tracking-[0.34em] text-gold">
-                    Land of Dawn Access
-                  </p>
-                  <h1 className="mt-3 font-display text-4xl font-black uppercase leading-tight text-white mlbb-title">
-                    Enter the Royal Command
-                  </h1>
-                  <p className="mt-3 text-sm font-medium leading-6 text-text-muted">
-                    Honor, precision, and tournament focus for every Royal Supremacy commander.
-                  </p>
+    <div className="relative min-h-[100svh] overflow-hidden bg-background text-text-white">
+      <picture className="absolute inset-0">
+        <source media="(max-width: 767px)" srcSet={mobileAuthImage} />
+        <img
+          src={desktopAuthImage || splashImage}
+          alt=""
+          aria-hidden="true"
+          className="h-full w-full object-cover object-center"
+        />
+      </picture>
+      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(3,7,18,0),rgba(3,7,18,0.2)_36%,rgba(3,7,18,0.58)_64%,rgba(3,7,18,0.84)),radial-gradient(circle_at_50%_4%,rgba(95,183,255,0.16),transparent_26%)] md:bg-[linear-gradient(90deg,rgba(3,7,18,0),rgba(3,7,18,0.04)_42%,rgba(3,7,18,0.3)_70%,rgba(3,7,18,0.62)),radial-gradient(circle_at_84%_20%,rgba(95,183,255,0.16),transparent_30%)]" />
+
+      <main className="relative z-10 flex min-h-[100svh] items-end justify-center px-4 pb-5 pt-[34svh] sm:px-8 md:items-center md:justify-end md:px-14 md:py-8">
+        <section className="mx-auto flex w-full max-w-[430px] items-center justify-center md:mx-0">
+          <div className="w-full rounded-lg border border-blue-200/12 bg-[#06111f]/48 p-5 shadow-[0_28px_90px_rgba(0,0,0,0.48)] backdrop-blur-xl sm:p-7 md:bg-[#06111f]/42">
+            {signupReceipt ? (
+              <div className="auth-request-alert space-y-5" role="status" aria-live="polite">
+                <div className="flex items-start gap-3">
+                  <div className="grid h-11 w-11 shrink-0 place-items-center rounded-lg border border-gold/35 bg-gold/10 text-gold">
+                    <ShieldCheck className="h-5 w-5" />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-[10px] font-black uppercase tracking-[0.28em] text-gold">
+                      Request Sent
+                    </p>
+                    <p className="mt-2 text-sm font-semibold leading-6 text-white">
+                      Your account request has been sent to the Admin Portal for review.
+                      You will be allowed in shortly after approval.
+                    </p>
+                  </div>
                 </div>
+
+                <div className="space-y-3 rounded-lg border border-blue-200/12 bg-black/18 p-4">
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                      Username / Email
+                    </p>
+                    <p className="mt-1 break-all text-sm font-black text-gold">
+                      {signupReceipt.identifier}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                      Password
+                    </p>
+                    <p className="mt-1 break-all text-sm font-black text-white">
+                      {signupReceipt.password}
+                    </p>
+                  </div>
+                </div>
+
+                <p className="text-xs font-semibold leading-5 text-text-muted">
+                  Keep these details. They are the login details you will use after an
+                  admin allows this account to exist.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSignupReceipt(null);
+                    setMode("login");
+                    setIdentifier(signupReceipt.identifier);
+                  }}
+                  className="flex h-12 w-full items-center justify-center gap-2 rounded-lg border border-gold/45 bg-gold text-sm font-black uppercase tracking-wider text-background shadow-[0_16px_36px_rgba(242,196,83,0.2)] transition hover:bg-[#ffd766] focus:outline-none focus:ring-2 focus:ring-gold/60 active:scale-[0.99]"
+                >
+                  <LogIn className="h-4 w-4" />
+                  Back to Login
+                </button>
               </div>
-            </div>
-          </section>
-
-          <section className="order-1 flex w-full min-w-0 items-center justify-center lg:order-2">
-            <div
-              className="battle-panel min-w-0 overflow-hidden px-5 py-7 sm:px-8 sm:py-9"
-              style={{ width: "calc(100vw - 2rem)", maxWidth: "460px" }}
-            >
-              <div className="relative z-10">
-                <div className="mx-auto mb-7 flex h-16 w-16 items-center justify-center border border-gold/50 bg-background/75 text-gold shadow-[0_0_28px_rgba(242,196,83,0.22)]">
-                  <Crown className="h-9 w-9" />
-                </div>
-
-                <div className="mb-7 text-center">
-                  <p className="text-[10px] font-black uppercase tracking-[0.42em] text-gold">
-                    Royal Supremacy
-                  </p>
-                  <h2 className="mt-2 font-display text-3xl font-black uppercase text-white mlbb-title sm:text-4xl">
-                    {isSignup ? "Create Account" : "Squad Login"}
-                  </h2>
-                </div>
-
-                <div className="mb-6 grid min-w-0 grid-cols-2 border border-blue-200/15 bg-background/65 p-1">
+            ) : (
+              <>
+                <div className="mb-6 grid min-w-0 grid-cols-2 rounded-lg border border-blue-200/12 bg-black/18 p-1 shadow-[inset_0_1px_0_rgba(255,255,255,0.04)]">
                   <button
                     type="button"
                     aria-pressed={mode === "login"}
                     onClick={() => switchMode("login")}
                     className={cn(
-                      "flex h-11 min-w-0 items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition",
+                      "flex h-11 min-w-0 items-center justify-center gap-2 rounded-md text-xs font-black uppercase tracking-wider transition",
                       mode === "login"
-                        ? "bg-gradient-to-r from-purple-royal to-[#1e8bf5] text-white shadow-lg shadow-purple-royal/25"
-                        : "text-text-muted hover:text-white",
+                        ? "bg-gold text-background shadow-[0_0_22px_rgba(242,196,83,0.22)]"
+                        : "text-text-muted hover:bg-white/5 hover:text-white",
                     )}
                   >
                     <LogIn className="h-4 w-4" />
@@ -165,10 +238,10 @@ export default function Auth() {
                     aria-pressed={mode === "signup"}
                     onClick={() => switchMode("signup")}
                     className={cn(
-                      "flex h-11 min-w-0 items-center justify-center gap-2 text-xs font-black uppercase tracking-wider transition",
+                      "flex h-11 min-w-0 items-center justify-center gap-2 rounded-md text-xs font-black uppercase tracking-wider transition",
                       mode === "signup"
-                        ? "bg-gradient-to-r from-gold-muted to-gold text-background shadow-lg shadow-gold/20"
-                        : "text-text-muted hover:text-white",
+                        ? "bg-gold text-background shadow-[0_0_22px_rgba(242,196,83,0.22)]"
+                        : "text-text-muted hover:bg-white/5 hover:text-white",
                     )}
                   >
                     <UserPlus className="h-4 w-4" />
@@ -187,7 +260,7 @@ export default function Auth() {
                       {isSignup ? "Username" : "Username or Email"}
                     </Label>
                     <div className="relative">
-                      <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+                      <Mail className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/80" />
                       <Input
                         id={credentialPolicy.identifier.id}
                         name={credentialPolicy.identifier.name}
@@ -198,7 +271,7 @@ export default function Auth() {
                         data-1p-ignore={credentialPolicy.identifier["data-1p-ignore"]}
                         autoCapitalize="none"
                         spellCheck={false}
-                        className="h-[52px] pl-11"
+                        className="h-[52px] border-blue-200/18 bg-[#0b1c32]/72 pl-11"
                       />
                     </div>
                   </div>
@@ -206,7 +279,7 @@ export default function Auth() {
                   <div>
                     <Label htmlFor={credentialPolicy.password.id}>Password</Label>
                     <div className="relative">
-                      <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/75" />
+                      <KeyRound className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-gold/80" />
                       <Input
                         id={credentialPolicy.password.id}
                         name={credentialPolicy.password.name}
@@ -216,7 +289,7 @@ export default function Auth() {
                         autoComplete={credentialPolicy.password.autoComplete}
                         data-lpignore={credentialPolicy.password["data-lpignore"]}
                         data-1p-ignore={credentialPolicy.password["data-1p-ignore"]}
-                        className="h-[52px] pl-11"
+                        className="h-[52px] border-blue-200/18 bg-[#0b1c32]/72 pl-11"
                       />
                     </div>
                   </div>
@@ -224,40 +297,30 @@ export default function Auth() {
                   {error && (
                     <div
                       role="alert"
-                      className="border border-danger/30 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger"
+                      className="rounded-lg border border-danger/30 bg-danger/10 px-4 py-3 text-sm font-semibold text-danger"
                     >
                       {error}
                     </div>
                   )}
 
-                  <Button
+                  <button
                     type="submit"
-                    variant={isSignup ? "gold" : "primary"}
-                    size="lg"
                     disabled={isSubmitting}
-                    className="w-full gap-2"
+                    className="flex h-14 w-full items-center justify-center gap-2 rounded-lg border border-gold/45 bg-gold text-sm font-black uppercase tracking-wider text-background shadow-[0_16px_36px_rgba(242,196,83,0.2)] transition hover:bg-[#ffd766] focus:outline-none focus:ring-2 focus:ring-gold/60 active:scale-[0.99] disabled:pointer-events-none disabled:opacity-50"
                   >
                     {isSignup ? (
                       <UserPlus className="h-5 w-5" />
                     ) : (
-                      <ShieldCheck className="h-5 w-5" />
+                      <LogIn className="h-5 w-5" />
                     )}
-                    {isSubmitting
-                      ? "Processing"
-                      : isSignup
-                        ? "Create Account"
-                        : "Enter Command"}
-                  </Button>
+                    {isSubmitting ? "Processing" : getAuthSubmitLabel(isSignup)}
+                  </button>
                 </form>
+              </>
+            )}
 
-                <div className="mt-7 flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-[0.28em] text-text-muted">
-                  <Sparkles className="h-3.5 w-3.5 text-gold" />
-                  For Pride, Power and Victory.
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+          </div>
+        </section>
       </main>
     </div>
   );

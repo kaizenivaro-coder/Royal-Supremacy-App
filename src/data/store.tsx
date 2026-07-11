@@ -15,6 +15,8 @@ import type {
 import { mockAnnouncements, mockMembers, mockTryouts } from "./mock";
 import {
   ACTIVE_SEASON,
+  LEGACY_SEED_AUTH_ACCOUNT_IDS,
+  OWNER_USERNAME,
   SEED_AUTH_CREDENTIALS,
   createSeedMembers,
   createSeedRankHistory,
@@ -22,11 +24,14 @@ import {
 } from "./leaderboardSeed";
 import {
   AuthUser,
+  approvePendingAccountRequest,
   changeAccountPassword,
   connectAccountEmail,
-  createLocalAccount,
+  createPendingAccountRequest,
   ensureLocalAccount,
   LocalAuthAccount,
+  PendingAccountRequest,
+  rejectPendingAccountRequest,
   verifyLocalCredentials,
 } from "../lib/localAuth";
 import {
@@ -65,6 +70,7 @@ interface AppState {
   publicStrategyPlacements: StrategyPlacement[];
   privateStrategyPlacementsByUser: Record<string, StrategyPlacement[]>;
   strategyEditorUsernames: string[];
+  pendingAccountRequests: PendingAccountRequest[];
   isAdmin: boolean;
   authUser: AuthUser | null;
 }
@@ -91,9 +97,12 @@ interface AppContextType extends AppState {
   setPublicStrategyPlacements: (placements: StrategyPlacement[]) => void;
   setPrivateStrategyPlacements: (username: string, placements: StrategyPlacement[]) => void;
   setStrategyEditorUsernames: (usernames: string[]) => void;
+  setPendingAccountRequests: (requests: PendingAccountRequest[]) => void;
   setIsAdmin: (isAdmin: boolean) => void;
   login: (identifier: string, password: string) => Promise<AuthActionResult>;
   signup: (identifier: string, password: string) => Promise<AuthActionResult>;
+  approveAccountRequest: (requestId: string) => AuthActionResult;
+  rejectAccountRequest: (requestId: string) => AuthActionResult;
   connectEmail: (email: string) => Promise<AuthActionResult>;
   changePassword: (password: string) => Promise<AuthActionResult>;
   notifyTeamOnline: () => Notification;
@@ -129,6 +138,7 @@ const defaultState: AppState = {
   publicStrategyPlacements: [],
   privateStrategyPlacementsByUser: {},
   strategyEditorUsernames: [],
+  pendingAccountRequests: [],
   isAdmin: false,
   authUser: null,
 };
@@ -148,6 +158,7 @@ const activeDataKeys = [
   "publicStrategyPlacements",
   "privateStrategyPlacementsByUser",
   "strategyEditorUsernames",
+  "pendingAccountRequests",
   "isAdmin",
 ];
 
@@ -170,6 +181,48 @@ function writeStorage<T>(key: string, value: T) {
   localStorage.setItem(storageKey(key), JSON.stringify(value));
 }
 
+export function shouldSeedMvpAccounts() {
+  try {
+    return localStorage.getItem(storageKey("disable_seed_accounts")) !== "true";
+  } catch {
+    return true;
+  }
+}
+
+function pruneLegacySeedAuthAccounts(accounts: LocalAuthAccount[]) {
+  const legacySeedIds = new Set(LEGACY_SEED_AUTH_ACCOUNT_IDS);
+  const filteredAccounts = accounts.filter((account) => !legacySeedIds.has(account.id));
+  return filteredAccounts.length === accounts.length ? accounts : filteredAccounts;
+}
+
+function pruneLegacySeedAuthStorage() {
+  try {
+    const currentAccounts = readStorage<LocalAuthAccount[]>("auth_accounts", []);
+    const nextAccounts = pruneLegacySeedAuthAccounts(currentAccounts);
+    if (nextAccounts.length !== currentAccounts.length) {
+      writeStorage("auth_accounts", nextAccounts);
+    }
+
+    const authSession = readStorage<AuthUser | null>("auth_session", null);
+    if (authSession && LEGACY_SEED_AUTH_ACCOUNT_IDS.includes(authSession.id)) {
+      localStorage.removeItem(storageKey("auth_session"));
+    }
+  } catch {
+    // Local storage can be unavailable in private contexts; the in-memory defaults still work.
+  }
+}
+
+function consumeLocalAccountResetRequest() {
+  try {
+    const key = storageKey("disable_seed_accounts");
+    if (localStorage.getItem(key) !== "true") return false;
+    localStorage.removeItem(key);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 function writeAppStateSnapshot(state: RemoteAppState) {
   writeStorage("members", state.members);
   writeStorage("announcements", state.announcements);
@@ -182,9 +235,14 @@ function writeAppStateSnapshot(state: RemoteAppState) {
   writeStorage("rankHistory", state.rankHistory);
   writeStorage("publicStrategyPlacements", state.publicStrategyPlacements);
   writeStorage("strategyEditorUsernames", state.strategyEditorUsernames);
+  writeStorage("pendingAccountRequests", state.pendingAccountRequests);
+  writeStorage("auth_accounts", state.authAccounts);
 }
 
-function createFallbackAppState(authUser: AuthUser | null): RemoteAppState {
+function createFallbackAppState(
+  authUser: AuthUser | null,
+  authAccounts: LocalAuthAccount[] = readStorage("auth_accounts", []),
+): RemoteAppState {
   return {
     members: getInitialMembers(authUser),
     announcements: defaultState.announcements,
@@ -197,6 +255,11 @@ function createFallbackAppState(authUser: AuthUser | null): RemoteAppState {
     rankHistory: defaultState.rankHistory,
     publicStrategyPlacements: defaultState.publicStrategyPlacements,
     strategyEditorUsernames: defaultState.strategyEditorUsernames,
+    pendingAccountRequests: readStorage(
+      "pendingAccountRequests",
+      defaultState.pendingAccountRequests,
+    ),
+    authAccounts,
   };
 }
 
@@ -260,6 +323,7 @@ function runMvpMigration() {
     writeStorage("teams", defaultState.teams);
     writeStorage("rpTransactions", defaultState.rpTransactions);
     writeStorage("rankHistory", defaultState.rankHistory);
+    writeStorage("pendingAccountRequests", defaultState.pendingAccountRequests);
     writeStorage("squadLogoSrc", squadLogoSrc);
     writeStorage("schema_version", MVP_STORAGE_VERSION);
   } catch {
@@ -269,6 +333,7 @@ function runMvpMigration() {
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
   runMvpMigration();
+  pruneLegacySeedAuthStorage();
   const saveTimerRef = useRef<ReturnType<typeof window.setTimeout> | null>(null);
 
   const [authAccounts, setAuthAccountsState] = useState<LocalAuthAccount[]>(
@@ -277,7 +342,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [authUser, setAuthUserState] = useState<AuthUser | null>(
     readStorage("auth_session", defaultState.authUser),
   );
-  const localFallbackState = createFallbackAppState(authUser);
+  const localFallbackState = createFallbackAppState(authUser, authAccounts);
   const initialLocalAppState = reconcileRemoteAppState(
     {
       members: readStorage("members", localFallbackState.members),
@@ -297,6 +362,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         "strategyEditorUsernames",
         localFallbackState.strategyEditorUsernames,
       ),
+      pendingAccountRequests: readStorage(
+        "pendingAccountRequests",
+        localFallbackState.pendingAccountRequests,
+      ),
+      authAccounts,
     },
     localFallbackState,
   );
@@ -336,6 +406,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [strategyEditorUsernames, setStrategyEditorUsernamesState] = useState<string[]>(
     initialLocalAppState.strategyEditorUsernames,
   );
+  const [pendingAccountRequests, setPendingAccountRequestsState] = useState<PendingAccountRequest[]>(
+    initialLocalAppState.pendingAccountRequests,
+  );
   const [isAdmin, setIsAdminState] = useState<boolean>(
     readStorage("isAdmin", defaultState.isAdmin),
   );
@@ -351,8 +424,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (remoteState) {
         const hydratedState = reconcileRemoteAppState(
           remoteState,
-          createFallbackAppState(authUser),
+          createFallbackAppState(authUser, authAccounts),
         );
+        setAuthAccountsState(hydratedState.authAccounts);
         setMembersState(hydratedState.members);
         setAnnouncementsState(hydratedState.announcements);
         setTryoutsState(hydratedState.tryouts);
@@ -364,6 +438,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setRankHistoryState(hydratedState.rankHistory);
         setPublicStrategyPlacementsState(hydratedState.publicStrategyPlacements);
         setStrategyEditorUsernamesState(hydratedState.strategyEditorUsernames);
+        setPendingAccountRequestsState(hydratedState.pendingAccountRequests);
         writeAppStateSnapshot(hydratedState);
       }
 
@@ -401,6 +476,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         rankHistory,
         publicStrategyPlacements,
         strategyEditorUsernames,
+        pendingAccountRequests,
+        authAccounts,
       });
     }, 700);
 
@@ -415,12 +492,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     members,
     notifications,
     rankHistory,
+    pendingAccountRequests,
     publicStrategyPlacements,
     rpTransactions,
     seasons,
     squadLogoSrc,
     teams,
     strategyEditorUsernames,
+    authAccounts,
     tryouts,
   ]);
 
@@ -483,6 +562,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeStorage("strategyEditorUsernames", usernames);
   };
 
+  const setPendingAccountRequests = (requests: PendingAccountRequest[]) => {
+    setPendingAccountRequestsState(requests);
+    writeStorage("pendingAccountRequests", requests);
+  };
+
   const setIsAdmin = (nextIsAdmin: boolean) => {
     setIsAdminState(nextIsAdmin);
     writeStorage("isAdmin", nextIsAdmin);
@@ -494,7 +578,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const ensureSeedAccounts = async (accounts: LocalAuthAccount[]) => {
-    let nextAccounts = accounts;
+    const resetRequested = consumeLocalAccountResetRequest();
+    if (!shouldSeedMvpAccounts() && !resetRequested) return [];
+
+    let nextAccounts = resetRequested ? [] : pruneLegacySeedAuthAccounts(accounts);
 
     for (const seedAccount of SEED_AUTH_CREDENTIALS) {
       const result = await ensureLocalAccount(
@@ -519,19 +606,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     let ignore = false;
 
     async function seedMvpAccounts() {
+      if (!shouldSeedMvpAccounts()) {
+        if (authAccounts.length > 0) {
+          persistAuthAccounts([]);
+        }
+        return;
+      }
+
       const nextAccounts = await ensureSeedAccounts(authAccounts);
       if (ignore || nextAccounts === authAccounts) {
         return;
       }
 
       setAuthAccountsState((currentAccounts) => {
+        const sanitizedCurrentAccounts = pruneLegacySeedAuthAccounts(currentAccounts);
         if (SEED_AUTH_CREDENTIALS.every((seedAccount) =>
-          currentAccounts.some((account) => account.username === seedAccount.username),
+          sanitizedCurrentAccounts.some((account) => account.username === seedAccount.username),
         )) {
+          if (sanitizedCurrentAccounts.length !== currentAccounts.length) {
+            writeStorage("auth_accounts", sanitizedCurrentAccounts);
+            return sanitizedCurrentAccounts;
+          }
           return currentAccounts;
         }
 
-        const mergedAccounts = [...currentAccounts, ...nextAccounts].filter(
+        const mergedAccounts = [...sanitizedCurrentAccounts, ...nextAccounts].filter(
           (account, index, accounts) =>
             accounts.findIndex((item) => item.id === account.id) === index,
         );
@@ -577,14 +676,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signup = async (identifier: string, password: string) => {
-    const result = await createLocalAccount(authAccounts, identifier, password);
+    const accountsForSignup = await ensureSeedAccounts(authAccounts);
+    if (accountsForSignup !== authAccounts) {
+      persistAuthAccounts(accountsForSignup);
+    }
+
+    const result = await createPendingAccountRequest(
+      pendingAccountRequests,
+      accountsForSignup,
+      identifier,
+      password,
+    );
+    if (result.error) {
+      return { ok: false, error: result.error };
+    }
+
+    setPendingAccountRequests(result.requests);
+    return { ok: true };
+  };
+
+  const approveAccountRequest = (requestId: string) => {
+    const result = approvePendingAccountRequest(
+      pendingAccountRequests,
+      authAccounts,
+      requestId,
+      isAdmin,
+    );
+
     if (result.error) {
       return { ok: false, error: result.error };
     }
 
     persistAuthAccounts(result.accounts);
-    setAuthSession(result.user);
-    ensureMemberForUser(result.user);
+    setPendingAccountRequests(result.requests);
+    ensureMemberForUser({
+      id: result.account.id,
+      username: result.account.username,
+      email: result.account.email,
+    });
+    return { ok: true };
+  };
+
+  const rejectAccountRequest = (requestId: string) => {
+    const result = rejectPendingAccountRequest(
+      pendingAccountRequests,
+      requestId,
+      isAdmin,
+    );
+
+    if (result.error) {
+      return { ok: false, error: result.error };
+    }
+
+    setPendingAccountRequests(result.requests);
     return { ok: true };
   };
 
@@ -600,6 +744,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     setAuthSession(result.user);
+    if (result.user.username === OWNER_USERNAME) {
+      setIsAdminState(true);
+      writeStorage("isAdmin", true);
+    }
     ensureMemberForUser(result.user);
     return { ok: true };
   };
@@ -796,6 +944,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPublicStrategyPlacementsState(defaultState.publicStrategyPlacements);
     setPrivateStrategyPlacementsByUserState(defaultState.privateStrategyPlacementsByUser);
     setStrategyEditorUsernamesState(defaultState.strategyEditorUsernames);
+    setPendingAccountRequestsState(defaultState.pendingAccountRequests);
     setIsAdminState(defaultState.isAdmin);
     writeStorage("members", nextMembers);
     writeStorage("announcements", defaultState.announcements);
@@ -809,6 +958,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     writeStorage("publicStrategyPlacements", defaultState.publicStrategyPlacements);
     writeStorage("privateStrategyPlacementsByUser", defaultState.privateStrategyPlacementsByUser);
     writeStorage("strategyEditorUsernames", defaultState.strategyEditorUsernames);
+    writeStorage("pendingAccountRequests", defaultState.pendingAccountRequests);
   };
 
   return (
@@ -826,6 +976,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         publicStrategyPlacements,
         privateStrategyPlacementsByUser,
         strategyEditorUsernames,
+        pendingAccountRequests,
         isAdmin,
         authUser,
         setMembers,
@@ -839,9 +990,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setPublicStrategyPlacements,
         setPrivateStrategyPlacements,
         setStrategyEditorUsernames,
+        setPendingAccountRequests,
         setIsAdmin,
         login,
         signup,
+        approveAccountRequest,
+        rejectAccountRequest,
         connectEmail,
         changePassword,
         notifyTeamOnline,

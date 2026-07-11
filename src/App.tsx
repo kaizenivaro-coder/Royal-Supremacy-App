@@ -11,7 +11,6 @@ import Auth from "./pages/Auth";
 import Dashboard from "./pages/Dashboard";
 import Teams from "./pages/Teams";
 import Announcements from "./pages/Announcements";
-import Tryouts from "./pages/Tryouts";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import MobilePreview from "./pages/MobilePreview";
@@ -62,7 +61,7 @@ export default function App() {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="strategy" element={<StrategyRoom />} />
             <Route path="announcements" element={<Announcements />} />
-            <Route path="tryouts" element={<Tryouts />} />
+            <Route path="tryouts" element={<PausedFeature featureName="Tryouts" />} />
             <Route path="admin" element={<Admin />} />
             <Route path="profile" element={<Profile />} />
           </Route>
