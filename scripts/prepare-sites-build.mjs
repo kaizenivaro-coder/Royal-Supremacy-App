@@ -1,10 +1,26 @@
-import { mkdir, copyFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, copyFile, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const distDir = "dist";
+const clientDir = join(distDir, "client");
 const hostingSource = ".openai/hosting.json";
 const hostingTarget = join(distDir, ".openai", "hosting.json");
 const serverTarget = join(distDir, "server", "index.js");
+const clientEntries = [
+  "assets",
+  "auth",
+  "banners",
+  "heroes",
+  "ranks",
+  "strategy",
+  "favicon.svg",
+  "index.html",
+];
+
+await mkdir(clientDir, { recursive: true });
+await Promise.all(clientEntries.map((entry) =>
+  cp(join(distDir, entry), join(clientDir, entry), { recursive: true, force: true }),
+));
 
 await mkdir(dirname(hostingTarget), { recursive: true });
 await copyFile(hostingSource, hostingTarget);
