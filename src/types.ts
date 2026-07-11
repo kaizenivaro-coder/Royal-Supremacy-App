@@ -151,6 +151,24 @@ export interface StrategyPlacement {
   movementRoute?: StrategyMovementRoute;
 }
 
+export interface StrategyKeyframe {
+  id: string;
+  label: string;
+  placements: StrategyPlacement[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StrategyMotionPath {
+  id: string;
+  fromKeyframeId: string;
+  toKeyframeId: string;
+  placementId: string;
+  points: StrategyRoutePoint[];
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface StrategyMovementRoute {
   startXPercent: number;
   startYPercent: number;

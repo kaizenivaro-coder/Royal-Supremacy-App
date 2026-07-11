@@ -14,11 +14,16 @@ type Props = {
   x: number;
   y: number;
   hasRoute: boolean;
+  hasMotionPath: boolean;
+  canEditMotionPath: boolean;
   onMovement: () => void;
+  onEditMotionPath: () => void;
   onReplay: () => void;
   onRename: () => void;
   onTeamColor: (color: TeamColor) => void;
   onDuplicate: () => void;
+  onClearMovement: () => void;
+  onClearMotionPath: () => void;
   onClear: () => void;
   onClose: () => void;
 };
@@ -27,11 +32,16 @@ export function StrategyHeroMenu({
   x,
   y,
   hasRoute,
+  hasMotionPath,
+  canEditMotionPath,
   onMovement,
+  onEditMotionPath,
   onReplay,
   onRename,
   onTeamColor,
   onDuplicate,
+  onClearMovement,
+  onClearMotionPath,
   onClear,
   onClose,
 }: Props) {
@@ -49,7 +59,10 @@ export function StrategyHeroMenu({
       onContextMenu={(event) => event.preventDefault()}
     >
       <MenuButton icon={<Footprints />} label="Movement" onClick={() => run(onMovement)} />
+      <MenuButton icon={<Footprints />} label="Edit Motion Path" disabled={!canEditMotionPath} onClick={() => run(onEditMotionPath)} />
       <MenuButton icon={<Play />} label="Replay Movement" disabled={!hasRoute} onClick={() => run(onReplay)} />
+      <MenuButton icon={<Footprints />} label="Clear Movement Line" disabled={!hasRoute} onClick={() => run(onClearMovement)} />
+      <MenuButton icon={<Footprints />} label="Clear Motion Path" disabled={!hasMotionPath} onClick={() => run(onClearMotionPath)} />
       <MenuButton icon={<Pencil />} label="Rename" onClick={() => run(onRename)} />
       <div className="my-1 border-t border-blue-200/10 pt-1">
         <p className="px-3 py-1 text-[9px] font-black uppercase tracking-widest text-text-muted">Team outline</p>

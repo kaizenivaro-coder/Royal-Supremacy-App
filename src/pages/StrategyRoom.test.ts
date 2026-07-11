@@ -4,27 +4,36 @@ import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { StrategyHeroMenu } from "../components/StrategyHeroMenu.tsx";
 import { StrategyMovementOverlay } from "../components/StrategyMovementOverlay.tsx";
+import { StrategyMovementDraftControls } from "./StrategyRoom.tsx";
 
 test("strategy hero menu exposes tactical actions and team outlines", () => {
   const html = renderToStaticMarkup(React.createElement(StrategyHeroMenu, {
     x: 100,
     y: 120,
     hasRoute: true,
+    hasMotionPath: true,
+    canEditMotionPath: true,
     onMovement: () => undefined,
+    onEditMotionPath: () => undefined,
     onReplay: () => undefined,
     onRename: () => undefined,
     onTeamColor: () => undefined,
     onDuplicate: () => undefined,
+    onClearMovement: () => undefined,
+    onClearMotionPath: () => undefined,
     onClear: () => undefined,
     onClose: () => undefined,
   }));
 
   assert.match(html, /Movement/);
+  assert.match(html, /Edit Motion Path/);
   assert.match(html, /Replay Movement/);
   assert.match(html, /Rename/);
   assert.match(html, /Blue Team/);
   assert.match(html, /Red Team/);
   assert.match(html, /Duplicate Hero/);
+  assert.match(html, /Clear Movement Line/);
+  assert.match(html, /Clear Motion Path/);
   assert.match(html, /Clear Hero/);
 });
 
@@ -39,4 +48,19 @@ test("movement overlay renders saved and preview routes", () => {
   assert.match(html, /marker-end/);
   assert.match(html, /polyline/);
   assert.match(html, /10,20 80,60/);
+});
+
+test("desktop movement drafts expose explicit finish and cancel controls", () => {
+  const html = renderToStaticMarkup(React.createElement(StrategyMovementDraftControls, {
+    inputMode: "desktop",
+    waypointCount: 5,
+    onUndo: () => undefined,
+    onCancel: () => undefined,
+    onFinish: () => undefined,
+  }));
+
+  assert.match(html, /Undo waypoint/);
+  assert.match(html, /Cancel movement/);
+  assert.match(html, /Finish movement/);
+  assert.match(html, /Right-click adds waypoints/);
 });
