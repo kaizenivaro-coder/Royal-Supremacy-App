@@ -10,9 +10,8 @@ import type {
   Season,
   StrategyPlacement,
   Team,
-  Tryout,
 } from "../types";
-import { mockAnnouncements, mockMembers, mockTryouts } from "./mock";
+import { mockAnnouncements, mockMembers } from "./mock";
 import {
   ACTIVE_SEASON,
   LEGACY_SEED_AUTH_ACCOUNT_IDS,
@@ -60,7 +59,6 @@ import { isSupabaseConfigured } from "../lib/supabaseClient";
 interface AppState {
   members: Member[];
   announcements: Announcement[];
-  tryouts: Tryout[];
   notifications: Notification[];
   squadLogoSrc: string;
   seasons: Season[];
@@ -89,7 +87,6 @@ interface AppContextType extends AppState {
   approvedAccountCount: number;
   setMembers: (members: Member[]) => void;
   setAnnouncements: (announcements: Announcement[]) => void;
-  setTryouts: (tryouts: Tryout[]) => void;
   setNotifications: (notifications: Notification[]) => void;
   setSquadLogoSrc: (src: string) => void;
   setTeams: (teams: Team[]) => void;
@@ -129,7 +126,6 @@ interface AppContextType extends AppState {
 const defaultState: AppState = {
   members: mockMembers,
   announcements: mockAnnouncements,
-  tryouts: mockTryouts,
   notifications: [],
   squadLogoSrc: "",
   seasons: [ACTIVE_SEASON],
@@ -149,7 +145,6 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 const activeDataKeys = [
   "members",
   "announcements",
-  "tryouts",
   "notifications",
   "squadLogoSrc",
   "seasons",
@@ -163,7 +158,7 @@ const activeDataKeys = [
   "isAdmin",
 ];
 
-const retiredDataKeys = ["schedule", "matches", "points"];
+export const RETIRED_STORAGE_KEYS = ["schedule", "matches", "points", "tryouts"];
 
 function storageKey(key: string) {
   return `royal_supremacy_${key}`;
@@ -227,7 +222,6 @@ function consumeLocalAccountResetRequest() {
 function writeAppStateSnapshot(state: RemoteAppState) {
   writeStorage("members", state.members);
   writeStorage("announcements", state.announcements);
-  writeStorage("tryouts", state.tryouts);
   writeStorage("notifications", state.notifications);
   writeStorage("squadLogoSrc", state.squadLogoSrc);
   writeStorage("seasons", state.seasons);
@@ -247,7 +241,6 @@ function createFallbackAppState(
   return {
     members: getInitialMembers(authUser),
     announcements: defaultState.announcements,
-    tryouts: defaultState.tryouts,
     notifications: defaultState.notifications,
     squadLogoSrc: readStorage("squadLogoSrc", defaultState.squadLogoSrc),
     seasons: defaultState.seasons,
@@ -316,7 +309,7 @@ function runMvpMigration() {
 
     const authUser = readStorage<AuthUser | null>("auth_session", null);
     const squadLogoSrc = readStorage<string>("squadLogoSrc", defaultState.squadLogoSrc);
-    retiredDataKeys.forEach((key) => localStorage.removeItem(storageKey(key)));
+    RETIRED_STORAGE_KEYS.forEach((key) => localStorage.removeItem(storageKey(key)));
     localStorage.removeItem(storageKey("isAdmin"));
     writeStorage("members", getInitialMembers(authUser));
     writeStorage("notifications", []);
@@ -348,7 +341,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     {
       members: readStorage("members", localFallbackState.members),
       announcements: readStorage("announcements", localFallbackState.announcements),
-      tryouts: readStorage("tryouts", localFallbackState.tryouts),
       notifications: readStorage("notifications", localFallbackState.notifications),
       squadLogoSrc: readStorage("squadLogoSrc", localFallbackState.squadLogoSrc),
       seasons: readStorage("seasons", localFallbackState.seasons),
@@ -376,9 +368,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   );
   const [announcements, setAnnouncementsState] = useState<Announcement[]>(
     initialLocalAppState.announcements,
-  );
-  const [tryouts, setTryoutsState] = useState<Tryout[]>(
-    initialLocalAppState.tryouts,
   );
   const [notifications, setNotificationsState] = useState<Notification[]>(
     initialLocalAppState.notifications,
@@ -430,7 +419,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setAuthAccountsState(hydratedState.authAccounts);
         setMembersState(hydratedState.members);
         setAnnouncementsState(hydratedState.announcements);
-        setTryoutsState(hydratedState.tryouts);
         setNotificationsState(hydratedState.notifications);
         setSquadLogoSrcState(hydratedState.squadLogoSrc);
         setSeasonsState(hydratedState.seasons);
@@ -468,7 +456,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       void saveRemoteAppState({
         members,
         announcements,
-        tryouts,
         notifications,
         squadLogoSrc,
         seasons,
@@ -501,7 +488,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     teams,
     strategyEditorUsernames,
     authAccounts,
-    tryouts,
   ]);
 
   const setMembers = (nextMembers: Member[]) => {
@@ -512,11 +498,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setAnnouncements = (nextAnnouncements: Announcement[]) => {
     setAnnouncementsState(nextAnnouncements);
     writeStorage("announcements", nextAnnouncements);
-  };
-
-  const setTryouts = (nextTryouts: Tryout[]) => {
-    setTryoutsState(nextTryouts);
-    writeStorage("tryouts", nextTryouts);
   };
 
   const setNotifications = (nextNotifications: Notification[]) => {
@@ -928,14 +909,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const resetData = () => {
-    [...activeDataKeys, ...retiredDataKeys].forEach((key) => {
+    [...activeDataKeys, ...RETIRED_STORAGE_KEYS].forEach((key) => {
       localStorage.removeItem(storageKey(key));
     });
     writeStorage("schema_version", MVP_STORAGE_VERSION);
     const nextMembers = getInitialMembers(authUser);
     setMembersState(nextMembers);
     setAnnouncementsState(defaultState.announcements);
-    setTryoutsState(defaultState.tryouts);
     setNotificationsState(defaultState.notifications);
     setSquadLogoSrcState(defaultState.squadLogoSrc);
     setSeasonsState(defaultState.seasons);
@@ -949,7 +929,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setIsAdminState(defaultState.isAdmin);
     writeStorage("members", nextMembers);
     writeStorage("announcements", defaultState.announcements);
-    writeStorage("tryouts", defaultState.tryouts);
     writeStorage("notifications", defaultState.notifications);
     writeStorage("squadLogoSrc", defaultState.squadLogoSrc);
     writeStorage("seasons", defaultState.seasons);
@@ -967,7 +946,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       value={{
         members,
         announcements,
-        tryouts,
         notifications,
         squadLogoSrc,
         seasons,
@@ -983,7 +961,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         authUser,
         setMembers,
         setAnnouncements,
-        setTryouts,
         setNotifications,
         setSquadLogoSrc,
         setTeams,

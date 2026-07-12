@@ -2,7 +2,7 @@ import type { Announcement, Member, Notification, ProfileBanner, Team } from "..
 import { publicAsset } from "./publicAssets";
 
 export const ADMIN_PORTAL_PASSWORD = "Toxic0303#";
-export const MVP_STORAGE_VERSION = "royal-supremacy-mvp-2026-05-28-leaderboard";
+export const MVP_STORAGE_VERSION = "royal-supremacy-mobile-foundation-2026-07-12";
 
 export const DEFAULT_TEAM = "Unassigned";
 export const TEAM_GROUPS = [

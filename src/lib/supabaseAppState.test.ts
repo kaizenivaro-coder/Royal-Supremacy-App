@@ -32,11 +32,21 @@ test("normalizeRemoteAppState keeps valid remote MVP state and fills missing opt
   const state = normalizeRemoteAppState({ members: [member], announcements: [] });
 
   assert.equal(state?.members[0]?.username, "kingchoou");
-  assert.deepEqual(state?.tryouts, []);
   assert.deepEqual(state?.notifications, []);
   assert.deepEqual(state?.pendingAccountRequests, []);
   assert.deepEqual(state?.authAccounts, []);
   assert.equal(state?.squadLogoSrc, "");
+});
+
+test("normalizeRemoteAppState ignores a legacy tryouts property", () => {
+  const state = normalizeRemoteAppState({
+    members: [member],
+    announcements: [],
+    tryouts: [{ id: "tryout_legacy" }],
+  });
+
+  assert.ok(state);
+  assert.equal("tryouts" in state, false);
 });
 
 test("normalizeRemoteAppState rejects data without a members list", () => {
@@ -49,7 +59,6 @@ test("reconcileRemoteAppState repairs stale partial remote state with seeded squ
   const fallback = {
     members: seedMembers,
     announcements: [],
-    tryouts: [],
     notifications: [],
     squadLogoSrc: "",
     seasons: [ACTIVE_SEASON],

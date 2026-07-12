@@ -61,7 +61,7 @@ export default function App() {
             <Route path="leaderboard" element={<Leaderboard />} />
             <Route path="strategy" element={<StrategyRoom />} />
             <Route path="announcements" element={<Announcements />} />
-            <Route path="tryouts" element={<PausedFeature featureName="Tryouts" />} />
+            <Route path="tryouts" element={<PausedFeature featureName="This section has been retired" />} />
             <Route path="admin" element={<Admin />} />
             <Route path="profile" element={<Profile />} />
           </Route>

@@ -3,7 +3,12 @@ import test from "node:test";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { MVP_STORAGE_VERSION } from "../lib/mvpApp.ts";
-import { AppProvider, shouldSeedMvpAccounts, useAppStore } from "./store.tsx";
+import {
+  AppProvider,
+  RETIRED_STORAGE_KEYS,
+  shouldSeedMvpAccounts,
+  useAppStore,
+} from "./store.tsx";
 import { SEED_AUTH_CREDENTIALS } from "./leaderboardSeed.ts";
 
 function installLocalStorageStub(initialValues: Record<string, string> = {}) {
@@ -37,6 +42,10 @@ test("local account seeding stays enabled by default", () => {
   installLocalStorageStub();
 
   assert.equal(shouldSeedMvpAccounts(), true);
+});
+
+test("retired storage keys include legacy tryouts data", () => {
+  assert.ok(RETIRED_STORAGE_KEYS.includes("tryouts"));
 });
 
 test("the canonical seeded auth set contains only King Choou", () => {

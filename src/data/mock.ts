@@ -1,4 +1,4 @@
-import type { Announcement, Member, Tryout } from "../types";
+import type { Announcement, Member } from "../types";
 import { createSeedMembers } from "./leaderboardSeed";
 import { publicAsset } from "../lib/publicAssets";
 
@@ -28,7 +28,7 @@ export const mockAnnouncements: Announcement[] = [
   {
     id: "announcement_002",
     title: "MVP Build Focus",
-    message: "Teams, profiles, announcements, tryouts, and admin assignment are the current priority.",
+    message: "Teams, profiles, announcements, and admin assignment are the current priority.",
     priority: "Normal",
     postedBy: "Royal Supremacy",
     date: "2026-05-09",
@@ -50,24 +50,5 @@ export const mockAnnouncements: Announcement[] = [
     likedBy: [],
     savedBy: [],
     comments: [],
-  },
-];
-
-export const mockTryouts: Tryout[] = [
-  {
-    id: "tryout_001",
-    playerName: "New Player",
-    mlbbId: "987654321",
-    serverId: "4321",
-    currentRank: "Mythic",
-    highestRank: "Mythical Glory",
-    mainRole: "Jungle",
-    secondaryRole: "Gold Lane",
-    mainHeroes: ["Ling", "Lancelot", "Hayabusa"],
-    country: "Tanzania",
-    availability: "Evenings and weekends",
-    whatsapp: "+255...",
-    reason: "I want to join a serious MLBB squad.",
-    status: "Pending",
   },
 ];

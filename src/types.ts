@@ -69,23 +69,6 @@ export interface AnnouncementComment {
   editedAt?: string;
 }
 
-export interface Tryout {
-  id: string;
-  playerName: string;
-  mlbbId: string;
-  serverId: string;
-  currentRank: string;
-  highestRank: string;
-  mainRole: string;
-  secondaryRole: string;
-  mainHeroes: string[];
-  country: string;
-  availability: string;
-  whatsapp: string;
-  reason: string; // Why they want to join
-  status: string; // Pending, Accepted, Rejected, Trial, Needs Test Match
-}
-
 export type RankStatus =
   | "Unranked"
   | "Grandmaster"

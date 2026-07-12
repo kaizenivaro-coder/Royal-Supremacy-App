@@ -7,7 +7,6 @@ import type {
   Season,
   StrategyPlacement,
   Team,
-  Tryout,
 } from "../types";
 import type { LocalAuthAccount, PendingAccountRequest } from "./localAuth";
 import { LEGACY_SEED_AUTH_ACCOUNT_IDS } from "../data/leaderboardSeed";
@@ -18,7 +17,6 @@ export const SUPABASE_APP_STATE_ID = "royal-supremacy";
 export type RemoteAppState = {
   members: Member[];
   announcements: Announcement[];
-  tryouts: Tryout[];
   notifications: Notification[];
   squadLogoSrc: string;
   seasons: Season[];
@@ -108,7 +106,6 @@ export function reconcileRemoteAppState(
   return {
     members: clearLegacySeedAuthLinks(mergeSeedRoster(remoteState.members, fallbackState.members)),
     announcements: mergeById(remoteState.announcements, fallbackState.announcements),
-    tryouts: mergeById(remoteState.tryouts, fallbackState.tryouts),
     notifications: remoteState.notifications,
     squadLogoSrc: remoteState.squadLogoSrc || fallbackState.squadLogoSrc,
     seasons: mergeById(remoteState.seasons, fallbackState.seasons),
@@ -138,7 +135,6 @@ export function normalizeRemoteAppState(value: unknown): RemoteAppState | null {
   return {
     members: data.members,
     announcements: Array.isArray(data.announcements) ? data.announcements : [],
-    tryouts: Array.isArray(data.tryouts) ? data.tryouts : [],
     notifications: Array.isArray(data.notifications) ? data.notifications : [],
     squadLogoSrc: typeof data.squadLogoSrc === "string" ? data.squadLogoSrc : "",
     seasons: Array.isArray(data.seasons) ? data.seasons : [],
