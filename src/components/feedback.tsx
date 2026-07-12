@@ -4,7 +4,32 @@ import { cn } from "../lib/utils";
 
 export type StatusTone = "info" | "success" | "warning" | "error";
 
-type StatusBannerProps = Omit<React.HTMLAttributes<HTMLDivElement>, "role"> & {
+type ControlledAriaProps<Keys extends string> = {
+  [Key in Keys]?: never;
+};
+
+type FeedbackDivProps = Pick<
+  React.HTMLAttributes<HTMLDivElement>,
+  | "aria-describedby"
+  | "aria-label"
+  | "aria-labelledby"
+  | "children"
+  | "className"
+  | "dir"
+  | "hidden"
+  | "id"
+  | "lang"
+  | "onClick"
+  | "onKeyDown"
+  | "style"
+  | "tabIndex"
+  | "title"
+> & {
+  "data-testid"?: string;
+};
+
+export type StatusBannerProps = FeedbackDivProps &
+  ControlledAriaProps<"aria-atomic" | "aria-live" | "role"> & {
   tone?: StatusTone;
   icon?: LucideIcon;
 };
@@ -45,7 +70,8 @@ export function StatusBanner({
   );
 }
 
-type EmptyStateProps = Omit<React.HTMLAttributes<HTMLDivElement>, "title"> & {
+export type EmptyStateProps = Omit<FeedbackDivProps, "title"> &
+  ControlledAriaProps<"aria-live" | "role"> & {
   title: React.ReactNode;
   description?: React.ReactNode;
   action?: React.ReactNode;
@@ -86,10 +112,10 @@ export function EmptyState({
   );
 }
 
-type ToastRegionProps = Omit<
-  React.HTMLAttributes<HTMLDivElement>,
-  "aria-label" | "aria-live" | "role"
-> & {
+export type ToastRegionProps = Omit<FeedbackDivProps, "aria-label"> &
+  ControlledAriaProps<
+    "aria-atomic" | "aria-label" | "aria-live" | "aria-relevant" | "role"
+  > & {
   label?: string;
   politeness?: "polite" | "assertive";
 };
@@ -110,7 +136,7 @@ export function ToastRegion({
       aria-atomic="false"
       aria-relevant="additions text"
       className={cn(
-        "pointer-events-none fixed inset-x-4 top-4 z-[120] flex flex-col items-end gap-2 sm:left-auto sm:w-full sm:max-w-sm",
+        "pointer-events-none fixed inset-x-4 top-4 z-[120] flex flex-col items-end gap-2 [&>*]:pointer-events-auto sm:left-auto sm:w-full sm:max-w-sm",
         className,
       )}
     >
