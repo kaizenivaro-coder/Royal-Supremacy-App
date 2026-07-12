@@ -36,7 +36,7 @@ test("StatusBanner uses assertive alert semantics for errors and distinct tone s
   assert.match(markup[3], /border-danger/);
 });
 
-test("EmptyState exposes a heading, content, action, and Lucide icon", () => {
+test("EmptyState exposes polite status semantics, a heading, content, action, and Lucide icon", () => {
   const html = renderToStaticMarkup(
     React.createElement(EmptyState, {
       icon: Inbox,
@@ -46,6 +46,8 @@ test("EmptyState exposes a heading, content, action, and Lucide icon", () => {
     }),
   );
 
+  assert.match(html, /role="status"/);
+  assert.match(html, /aria-live="polite"/);
   assert.match(html, /<h2/);
   assert.match(html, /No decrees yet/);
   assert.match(html, /New decrees will appear here\./);

@@ -63,6 +63,8 @@ export function EmptyState({
   return (
     <div
       {...props}
+      role="status"
+      aria-live="polite"
       className={cn(
         "flex min-h-56 flex-col items-center justify-center rounded-lg border border-dashed border-blue-200/15 bg-black/20 px-5 py-10 text-center",
         className,
