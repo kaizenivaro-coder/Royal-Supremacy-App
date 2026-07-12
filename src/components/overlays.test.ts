@@ -119,7 +119,15 @@ function StackedOverlayHarness() {
   );
 }
 
-function EscapeConsumerHarness() {
+function EscapeConsumerHarness({
+  onEntry,
+  onHandled,
+  stopPropagation = false,
+}: {
+  onEntry?: (defaultPrevented: boolean) => void;
+  onHandled?: () => void;
+  stopPropagation?: boolean;
+}) {
   const [open, setOpen] = useState(true);
 
   return React.createElement(
@@ -132,7 +140,15 @@ function EscapeConsumerHarness() {
     React.createElement("input", {
       "aria-label": "Command input",
       onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => {
-        if (event.key === "Escape") event.preventDefault();
+        if (event.key !== "Escape") return;
+
+        onEntry?.(event.defaultPrevented);
+        if (stopPropagation) {
+          event.stopPropagation();
+        } else if (!event.defaultPrevented) {
+          onHandled?.();
+          event.preventDefault();
+        }
       },
     }),
     React.createElement("button", { type: "button" }, "Plain action"),
@@ -224,15 +240,53 @@ test("FocusedDialog closes only from a direct backdrop interaction", async () =>
 });
 
 test("a focused descendant can consume Escape before the dialog closes", async () => {
+  const observedDefaultPrevented: boolean[] = [];
+  let handledCount = 0;
   const user = userEvent.setup({ document });
-  const view = render(React.createElement(EscapeConsumerHarness));
+  const view = render(
+    React.createElement(EscapeConsumerHarness, {
+      onEntry: (defaultPrevented) => {
+        observedDefaultPrevented.push(defaultPrevented);
+      },
+      onHandled: () => {
+        handledCount += 1;
+      },
+    }),
+  );
   const input = await view.findByRole("textbox", { name: "Command input" });
 
   await user.click(input);
   await user.keyboard("{Escape}");
 
+  assert.deepEqual(observedDefaultPrevented, [false]);
+  assert.equal(handledCount, 1);
   assert.ok(view.getByRole("dialog", { name: "Command dialog" }));
   assert.equal(document.activeElement, input);
+});
+
+test("descendant stopPropagation consumes Escape without poisoning the next event", async () => {
+  const observedDefaultPrevented: boolean[] = [];
+  const user = userEvent.setup({ document });
+  const view = render(
+    React.createElement(EscapeConsumerHarness, {
+      stopPropagation: true,
+      onEntry: (defaultPrevented) => {
+        observedDefaultPrevented.push(defaultPrevented);
+      },
+    }),
+  );
+  const input = await view.findByRole("textbox", { name: "Command input" });
+
+  await user.click(input);
+  await user.keyboard("{Escape}");
+  await Promise.resolve();
+
+  assert.deepEqual(observedDefaultPrevented, [false]);
+  assert.ok(view.getByRole("dialog", { name: "Command dialog" }));
+
+  await user.click(view.getByRole("button", { name: "Plain action" }));
+  await user.keyboard("{Escape}");
+  await waitFor(() => assert.equal(view.queryByRole("dialog"), null));
 });
 
 test("composing Escape is ignored and unconsumed Escape closes", async () => {

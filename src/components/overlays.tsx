@@ -17,10 +17,25 @@ type OverlayFrameProps = OverlayProps & {
 };
 
 type EscapeEventState = {
-  defaultPreventedByConsumer: boolean;
-  preventedAfterRadixCapture: boolean;
-  restorePreventDefault: () => void;
+  event: KeyboardEvent;
+  consumerPrevented: boolean;
+  expectRadixPreventDefault: boolean;
+  propagationStopped: boolean;
+  settled: boolean;
+  restoreEventMethods: () => void;
 };
+
+function restoreOwnProperty(
+  target: object,
+  property: string,
+  descriptor: PropertyDescriptor | undefined,
+) {
+  if (descriptor) {
+    Object.defineProperty(target, property, descriptor);
+  } else {
+    delete (target as Record<string, unknown>)[property];
+  }
+}
 
 function OverlayFrame({
   open,
@@ -36,12 +51,23 @@ function OverlayFrame({
   const escapeEventStatesRef = useRef(
     new WeakMap<KeyboardEvent, EscapeEventState>(),
   );
+  const pendingEscapeRef = useRef<EscapeEventState | null>(null);
   const isSheet = variant === "sheet";
+
+  const settleEscapeEvent = (state: EscapeEventState) => {
+    if (state.settled) return;
+
+    state.settled = true;
+    state.restoreEventMethods();
+    escapeEventStatesRef.current.delete(state.event);
+    if (pendingEscapeRef.current === state) pendingEscapeRef.current = null;
+  };
 
   return (
     <Dialog.Root
       open={open}
       onOpenChange={(nextOpen) => {
+        if (!nextOpen && pendingEscapeRef.current) return;
         if (!nextOpen) onClose();
       }}
     >
@@ -59,36 +85,80 @@ function OverlayFrame({
             aria-modal="true"
             aria-describedby={undefined}
             onEscapeKeyDown={(event) => {
-              const originalPreventDefault = event.preventDefault.bind(event);
-              const ownPreventDefaultDescriptor =
+              const preventDefaultDescriptor =
                 Object.getOwnPropertyDescriptor(event, "preventDefault");
+              const stopPropagationDescriptor =
+                Object.getOwnPropertyDescriptor(event, "stopPropagation");
+              const stopImmediatePropagationDescriptor =
+                Object.getOwnPropertyDescriptor(
+                  event,
+                  "stopImmediatePropagation",
+                );
+              const originalPreventDefault = event.preventDefault.bind(event);
+              const originalStopPropagation =
+                event.stopPropagation.bind(event);
+              const originalStopImmediatePropagation =
+                event.stopImmediatePropagation.bind(event);
               const state: EscapeEventState = {
-                defaultPreventedByConsumer: event.defaultPrevented,
-                preventedAfterRadixCapture: false,
-                restorePreventDefault: () => {
-                  if (ownPreventDefaultDescriptor) {
-                    Object.defineProperty(
-                      event,
-                      "preventDefault",
-                      ownPreventDefaultDescriptor,
-                    );
-                  } else {
-                    delete (event as KeyboardEvent & {
-                      preventDefault?: () => void;
-                    }).preventDefault;
-                  }
+                event,
+                consumerPrevented: event.defaultPrevented,
+                expectRadixPreventDefault: !event.defaultPrevented,
+                propagationStopped: false,
+                settled: false,
+                restoreEventMethods: () => {
+                  restoreOwnProperty(
+                    event,
+                    "preventDefault",
+                    preventDefaultDescriptor,
+                  );
+                  restoreOwnProperty(
+                    event,
+                    "stopPropagation",
+                    stopPropagationDescriptor,
+                  );
+                  restoreOwnProperty(
+                    event,
+                    "stopImmediatePropagation",
+                    stopImmediatePropagationDescriptor,
+                  );
                 },
               };
 
-              originalPreventDefault();
+              // Ignore Radix's immediate capture-phase cancellation; later calls
+              // come from descendants and represent real consumer prevention.
               Object.defineProperty(event, "preventDefault", {
                 configurable: true,
+                writable: true,
                 value: () => {
-                  state.preventedAfterRadixCapture = true;
+                  if (state.expectRadixPreventDefault) {
+                    state.expectRadixPreventDefault = false;
+                    return;
+                  }
+
+                  state.consumerPrevented = true;
                   originalPreventDefault();
                 },
               });
+              Object.defineProperty(event, "stopPropagation", {
+                configurable: true,
+                writable: true,
+                value: () => {
+                  state.propagationStopped = true;
+                  originalStopPropagation();
+                },
+              });
+              Object.defineProperty(event, "stopImmediatePropagation", {
+                configurable: true,
+                writable: true,
+                value: () => {
+                  state.propagationStopped = true;
+                  originalStopImmediatePropagation();
+                },
+              });
+
               escapeEventStatesRef.current.set(event, state);
+              pendingEscapeRef.current = state;
+              queueMicrotask(() => settleEscapeEvent(state));
             }}
             onKeyDown={(event) => {
               if (event.key !== "Escape") return;
@@ -96,14 +166,19 @@ function OverlayFrame({
               const nativeEvent = event.nativeEvent as KeyboardEvent;
               const state = escapeEventStatesRef.current.get(nativeEvent);
               const defaultPrevented = state
-                ? state.defaultPreventedByConsumer ||
-                  state.preventedAfterRadixCapture
+                ? state.consumerPrevented || event.defaultPrevented
                 : event.defaultPrevented;
+              const propagationStopped = state?.propagationStopped ?? false;
 
-              state?.restorePreventDefault();
-              escapeEventStatesRef.current.delete(nativeEvent);
+              if (state) settleEscapeEvent(state);
 
-              if (nativeEvent.isComposing || defaultPrevented) return;
+              if (
+                nativeEvent.isComposing ||
+                defaultPrevented ||
+                propagationStopped
+              ) {
+                return;
+              }
 
               event.preventDefault();
               onClose();
