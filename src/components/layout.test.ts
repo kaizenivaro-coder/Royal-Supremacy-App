@@ -6,8 +6,8 @@ import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { AppProvider } from "../data/store.tsx";
 import RootLayout from "./layout.tsx";
 
-function installLocalStorageStub() {
-  const storage = new Map<string, string>();
+function installLocalStorageStub(entries: Array<[string, string]> = []) {
+  const storage = new Map<string, string>(entries);
   Object.defineProperty(globalThis, "localStorage", {
     configurable: true,
     value: {
@@ -51,6 +51,8 @@ test("desktop sidebar stays pinned while page content scrolls", () => {
 });
 
 test("sidebar navigation does not expose Tryouts", () => {
+  installLocalStorageStub();
+
   const html = renderToStaticMarkup(
     React.createElement(
       AppProvider,
@@ -64,4 +66,39 @@ test("sidebar navigation does not expose Tryouts", () => {
   );
 
   assert.doesNotMatch(html, />Tryouts</);
+});
+
+test("sidebar navigation follows admin access from shared navigation config", () => {
+  installLocalStorageStub();
+
+  const nonAdminHtml = renderToStaticMarkup(
+    React.createElement(
+      AppProvider,
+      null,
+      React.createElement(
+        MemoryRouter,
+        { initialEntries: ["/"] },
+        React.createElement(RootLayout),
+      ),
+    ),
+  );
+
+  installLocalStorageStub([["royal_supremacy_isAdmin", JSON.stringify(true)]]);
+
+  const adminHtml = renderToStaticMarkup(
+    React.createElement(
+      AppProvider,
+      null,
+      React.createElement(
+        MemoryRouter,
+        { initialEntries: ["/"] },
+        React.createElement(RootLayout),
+      ),
+    ),
+  );
+
+  assert.doesNotMatch(nonAdminHtml, />Admin Portal</);
+  assert.match(adminHtml, />Admin Portal</);
+  assert.match(nonAdminHtml, />Home</);
+  assert.match(nonAdminHtml, />Decrees</);
 });

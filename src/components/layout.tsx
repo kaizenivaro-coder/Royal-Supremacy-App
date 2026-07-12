@@ -1,34 +1,19 @@
 import { Outlet, NavLink, useLocation } from "react-router-dom";
 import {
-  FileEdit,
-  LayoutDashboard,
   LogOut,
-  Megaphone,
   Menu,
-  MapPinned,
   PanelLeftClose,
   PanelLeftOpen,
-  Shield,
-  Trophy,
-  UserCircle,
   X,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "../lib/utils";
 import { useAppStore } from "../data/store";
+import { getDesktopNavigation, type NavigationItem } from "../config/navigation";
 import { SquadLogoPlaceholder } from "./SquadLogoPlaceholder";
 
-const navItems = [
-  { name: "Dashboard", path: "/", icon: LayoutDashboard },
-  { name: "My Profile", path: "/profile", icon: UserCircle },
-  { name: "Teams", path: "/teams", icon: Shield },
-  { name: "Leaderboard", path: "/leaderboard", icon: Trophy },
-  { name: "Strategy Room", path: "/strategy", icon: MapPinned },
-  { name: "Announcements", path: "/announcements", icon: Megaphone },
-  { name: "Admin Portal", path: "/admin", icon: FileEdit },
-];
-
 type SidebarContentProps = {
+  navigation: NavigationItem[];
   pathname: string;
   commanderName: string;
   squadLogoSrc: string;
@@ -39,6 +24,7 @@ type SidebarContentProps = {
 };
 
 function SidebarContent({
+  navigation,
   pathname,
   commanderName,
   squadLogoSrc,
@@ -63,7 +49,7 @@ function SidebarContent({
       </div>
 
       <nav className={cn("mt-16 space-y-1 lg:mt-0", collapsed ? "p-2" : "p-4")}>
-        {navItems.map((item) => {
+        {navigation.map((item) => {
           const Icon = item.icon;
           const isActive = pathname === item.path;
 
@@ -123,8 +109,9 @@ export default function RootLayout() {
     localStorage.getItem("royal_supremacy_sidebar_collapsed") === "true",
   );
   const location = useLocation();
-  const { authUser, logout, squadLogoSrc } = useAppStore();
+  const { authUser, isAdmin, logout, squadLogoSrc } = useAppStore();
   const commanderName = authUser?.username ?? "Commander";
+  const desktopNavigation = getDesktopNavigation(isAdmin);
 
   const toggleMenu = () => setMobileMenuOpen(!mobileMenuOpen);
   const toggleDesktopSidebar = () => {
@@ -163,6 +150,7 @@ export default function RootLayout() {
       {mobileMenuOpen && (
         <aside className="fixed inset-y-0 left-0 z-50 h-screen w-64 overflow-y-auto border-r border-white/5 bg-surface lg:hidden">
           <SidebarContent
+            navigation={desktopNavigation}
             pathname={location.pathname}
             commanderName={commanderName}
             squadLogoSrc={squadLogoSrc}
@@ -174,6 +162,7 @@ export default function RootLayout() {
 
       <aside className={cn("fixed inset-y-0 left-0 z-40 hidden h-screen shrink-0 overflow-y-auto border-r border-white/5 bg-surface transition-[width] duration-300 lg:block", desktopSidebarCollapsed ? "w-20" : "w-64")}>
         <SidebarContent
+          navigation={desktopNavigation}
           pathname={location.pathname}
           commanderName={commanderName}
           squadLogoSrc={squadLogoSrc}

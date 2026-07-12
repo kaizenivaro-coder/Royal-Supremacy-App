@@ -59,6 +59,7 @@ export default function App() {
             <Route path="matches" element={<PausedFeature featureName="Matches" />} />
             <Route path="points" element={<PausedFeature featureName="Paused MVP Section" />} />
             <Route path="leaderboard" element={<Leaderboard />} />
+            <Route path="notifications" element={<PausedFeature featureName="Notifications" />} />
             <Route path="strategy" element={<StrategyRoom />} />
             <Route path="announcements" element={<Announcements />} />
             <Route path="tryouts" element={<PausedFeature featureName="This section has been retired" />} />
