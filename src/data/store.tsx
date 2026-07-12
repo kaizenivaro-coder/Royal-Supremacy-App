@@ -160,6 +160,8 @@ const activeDataKeys = [
 
 export const RETIRED_STORAGE_KEYS = ["schedule", "matches", "points", "tryouts"];
 
+type MvpMigrationStorage = Pick<Storage, "getItem" | "setItem" | "removeItem">;
+
 function storageKey(key: string) {
   return `royal_supremacy_${key}`;
 }
@@ -295,31 +297,27 @@ function getInitialMembers(authUser: AuthUser | null): Member[] {
   return ensureAuthUserInRoster(createSeedMembers(), authUser);
 }
 
-function runMvpMigration() {
+export function runMvpMigration(storage: MvpMigrationStorage = localStorage) {
   try {
-    const rawSchemaVersion = localStorage.getItem(storageKey("schema_version"));
-    const storedSchemaVersion =
-      rawSchemaVersion === MVP_STORAGE_VERSION
-        ? rawSchemaVersion
-        : readStorage<string | null>("schema_version", null);
+    const schemaVersionKey = storageKey("schema_version");
+    const rawSchemaVersion = storage.getItem(schemaVersionKey);
+    let storedSchemaVersion = rawSchemaVersion;
 
-    if (storedSchemaVersion === MVP_STORAGE_VERSION) {
-      return;
+    if (rawSchemaVersion && rawSchemaVersion !== MVP_STORAGE_VERSION) {
+      try {
+        const parsedSchemaVersion = JSON.parse(rawSchemaVersion);
+        storedSchemaVersion =
+          typeof parsedSchemaVersion === "string" ? parsedSchemaVersion : null;
+      } catch {
+        storedSchemaVersion = rawSchemaVersion;
+      }
     }
 
-    const authUser = readStorage<AuthUser | null>("auth_session", null);
-    const squadLogoSrc = readStorage<string>("squadLogoSrc", defaultState.squadLogoSrc);
-    RETIRED_STORAGE_KEYS.forEach((key) => localStorage.removeItem(storageKey(key)));
-    localStorage.removeItem(storageKey("isAdmin"));
-    writeStorage("members", getInitialMembers(authUser));
-    writeStorage("notifications", []);
-    writeStorage("seasons", defaultState.seasons);
-    writeStorage("teams", defaultState.teams);
-    writeStorage("rpTransactions", defaultState.rpTransactions);
-    writeStorage("rankHistory", defaultState.rankHistory);
-    writeStorage("pendingAccountRequests", defaultState.pendingAccountRequests);
-    writeStorage("squadLogoSrc", squadLogoSrc);
-    writeStorage("schema_version", MVP_STORAGE_VERSION);
+    RETIRED_STORAGE_KEYS.forEach((key) => storage.removeItem(storageKey(key)));
+
+    if (storedSchemaVersion !== MVP_STORAGE_VERSION) {
+      storage.setItem(schemaVersionKey, JSON.stringify(MVP_STORAGE_VERSION));
+    }
   } catch {
     // Local storage can be unavailable in private contexts; the in-memory defaults still work.
   }

@@ -1,7 +1,7 @@
 # Royal Supremacy App
 
 Royal Supremacy is a Vite + React command center for managing an MLBB squad:
-members, fixed MVP teams, announcements, tryouts, profiles, and local admin
+members, fixed MVP teams, announcements, profiles, and local admin
 workflows.
 
 ## Run Locally

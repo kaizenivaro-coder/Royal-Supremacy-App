@@ -25,7 +25,6 @@ test("dashboard quick action dialog uses the focused modal treatment", () => {
         isVisible: true,
         latestAnnouncements: getLatestAnnouncements(mockAnnouncements),
         teamGroups: groupMembersByTeam(mockMembers),
-        pendingTryoutsCount: 1,
         currentMember: mockMembers[0],
         authUsername: "kingchoou",
         notifications: [],
