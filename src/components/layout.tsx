@@ -176,7 +176,7 @@ function MobileBottomNavigation({
       className="fixed inset-x-0 bottom-0 z-50 border-t border-gold/15 bg-[#071425]/95 backdrop-blur-md lg:hidden"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <div className="grid h-16 grid-cols-5 px-1">
+      <div className="grid h-[var(--mobile-bottom-nav-height)] grid-cols-5 px-1">
         {navigation.map((item) => {
           const Icon = item.icon;
 
@@ -318,7 +318,7 @@ export default function RootLayout() {
         />
       </aside>
 
-      <main className={cn("min-h-screen w-full flex-1 pb-[calc(4rem+env(safe-area-inset-bottom))] pt-14 transition-[padding-left] duration-300 lg:pb-0 lg:pt-0", desktopSidebarCollapsed ? "lg:pl-20" : "lg:pl-64")}>
+      <main className={cn("min-h-screen w-full flex-1 pb-[calc(var(--mobile-bottom-nav-height)+env(safe-area-inset-bottom)+16px)] pt-14 transition-[padding-left] duration-300 lg:pb-0 lg:pt-0", desktopSidebarCollapsed ? "lg:pl-20" : "lg:pl-64")}>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
           <Outlet />
         </div>

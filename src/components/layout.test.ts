@@ -156,9 +156,15 @@ test("mobile shell reserves top, bottom, and safe-area content clearance", () =>
   const html = renderLayout();
 
   assert.match(html, /pt-14/);
-  assert.match(html, /pb-\[calc\(4rem\+env\(safe-area-inset-bottom\)\)\]/);
+  assert.match(
+    html,
+    /pb-\[calc\(var\(--mobile-bottom-nav-height\)\+env\(safe-area-inset-bottom\)\+16px\)\]/,
+  );
   assert.match(html, /padding-bottom:env\(safe-area-inset-bottom\)/);
-  assert.match(html, /class="[^"]*\bh-16\b[^"]*grid-cols-5/);
+  assert.match(
+    html,
+    /class="[^"]*h-\[var\(--mobile-bottom-nav-height\)\][^"]*grid-cols-5/,
+  );
 });
 
 test("sidebar navigation does not expose Tryouts", () => {
