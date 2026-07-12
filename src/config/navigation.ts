@@ -78,24 +78,23 @@ const desktopKeys = Object.freeze([
 function selectNavigation(
   keys: readonly NavigationKey[],
   isAdmin: boolean,
-): NavigationItem[] {
+): readonly NavigationItem[] {
   // adminOnly controls presentation only; routes and data need their own authorization checks.
   const selection = keys
     .map((key) => canonicalNavigationRegistry[key])
     .filter((item) => !item.adminOnly || isAdmin);
 
-  Object.freeze(selection);
-  return selection;
+  return Object.freeze(selection);
 }
 
-export function getMobilePrimaryNavigation(isAdmin: boolean): NavigationItem[] {
+export function getMobilePrimaryNavigation(isAdmin: boolean): readonly NavigationItem[] {
   return selectNavigation(mobilePrimaryKeys, isAdmin);
 }
 
-export function getMoreNavigation(isAdmin: boolean): NavigationItem[] {
+export function getMoreNavigation(isAdmin: boolean): readonly NavigationItem[] {
   return selectNavigation(moreKeys, isAdmin);
 }
 
-export function getDesktopNavigation(isAdmin: boolean): NavigationItem[] {
+export function getDesktopNavigation(isAdmin: boolean): readonly NavigationItem[] {
   return selectNavigation(desktopKeys, isAdmin);
 }

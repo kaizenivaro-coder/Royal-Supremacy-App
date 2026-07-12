@@ -13,7 +13,7 @@ import { getDesktopNavigation, type NavigationItem } from "../config/navigation"
 import { SquadLogoPlaceholder } from "./SquadLogoPlaceholder";
 
 type SidebarContentProps = {
-  navigation: NavigationItem[];
+  navigation: readonly NavigationItem[];
   pathname: string;
   commanderName: string;
   squadLogoSrc: string;

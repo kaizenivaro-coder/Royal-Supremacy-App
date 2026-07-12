@@ -7,16 +7,16 @@ import {
   getMoreNavigation,
 } from "./navigation.ts";
 
-const allAppPaths = [
-  "/",
-  "/profile",
-  "/teams",
-  "/leaderboard",
-  "/strategy",
-  "/announcements",
-  "/notifications",
-  "/admin",
-] as const satisfies readonly AppPath[];
+const navigationDestinations = {
+  "/": true,
+  "/profile": true,
+  "/teams": true,
+  "/leaderboard": true,
+  "/strategy": true,
+  "/announcements": true,
+  "/notifications": true,
+  "/admin": true,
+} as const satisfies Record<AppPath, true>;
 
 test("mobile primary navigation uses the mobile-first routes and labels", () => {
   const nonAdminNavigation = getMobilePrimaryNavigation(false);
@@ -57,14 +57,14 @@ test("desktop navigation only includes the admin portal for admins", () => {
   );
 });
 
-test("navigation selectors cover the canonical application route contract", () => {
+test("navigation selectors cover the canonical navigation destinations", () => {
   const selectedPaths = new Set<AppPath>([
     ...getMobilePrimaryNavigation(true).map((item) => item.path),
     ...getMoreNavigation(true).map((item) => item.path),
     ...getDesktopNavigation(true).map((item) => item.path),
   ]);
 
-  assert.deepEqual([...selectedPaths].sort(), [...allAppPaths].sort());
+  assert.deepEqual([...selectedPaths].sort(), Object.keys(navigationDestinations).sort());
   assert.equal(getMobilePrimaryNavigation(true).some((item) => item.path === "/notifications"), false);
 });
 
@@ -92,11 +92,15 @@ test("navigation metadata and selector results cannot poison later calls", () =>
 if (false) {
   const navigation = getMobilePrimaryNavigation(false);
 
+  // @ts-expect-error selector results are readonly
+  navigation.push(navigation[0]);
+  // @ts-expect-error selector indexes are readonly
+  navigation[0] = navigation[1];
   // @ts-expect-error navigation metadata is readonly
   navigation[0].name = "Poisoned";
 }
 
-test("tryouts never appears in application navigation", () => {
+test("tryouts never appears in navigation destinations", () => {
   const navigation = [
     ...getMobilePrimaryNavigation(true),
     ...getMoreNavigation(true),
