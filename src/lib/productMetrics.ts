@@ -1,6 +1,11 @@
 type ProductMetricsInput = {
   accounts: { id: string }[];
-  members: { id: string; status: string; authUserId?: string }[];
+  members: {
+    id: string;
+    status: string;
+    lifecycleStatus?: string;
+    authUserId?: string;
+  }[];
   pendingAccountRequests: { id: string }[];
 };
 
@@ -11,8 +16,12 @@ export function getProductMetrics({
 }: ProductMetricsInput) {
   return {
     approvedAccountCount: accounts.length,
-    activeRosterCount: members.filter((member) => member.status === "Active").length,
-    archivedRosterCount: members.filter((member) => member.status === "Archived").length,
+    activeRosterCount: members.filter(
+      (member) => member.lifecycleStatus !== "Archived",
+    ).length,
+    archivedRosterCount: members.filter(
+      (member) => member.lifecycleStatus === "Archived",
+    ).length,
     pendingAccountCount: pendingAccountRequests.length,
   };
 }

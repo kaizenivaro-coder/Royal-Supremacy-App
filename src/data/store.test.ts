@@ -1,6 +1,9 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { shouldSeedMvpAccounts } from "./store.tsx";
+import React from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { MVP_STORAGE_VERSION } from "../lib/mvpApp.ts";
+import { AppProvider, shouldSeedMvpAccounts, useAppStore } from "./store.tsx";
 import { SEED_AUTH_CREDENTIALS } from "./leaderboardSeed.ts";
 
 function installLocalStorageStub(initialValues: Record<string, string> = {}) {
@@ -14,6 +17,12 @@ function installLocalStorageStub(initialValues: Record<string, string> = {}) {
       clear: () => storage.clear(),
     },
   });
+  return storage;
+}
+
+function ApprovedAccountCountProbe() {
+  const { approvedAccountCount } = useAppStore();
+  return React.createElement("output", null, approvedAccountCount);
 }
 
 test("local account seeding can be disabled for a cleared local browser", () => {
@@ -33,4 +42,22 @@ test("local account seeding stays enabled by default", () => {
 test("the canonical seeded auth set contains only King Choou", () => {
   assert.deepEqual(SEED_AUTH_CREDENTIALS.map((account) => account.username), ["kingchoou"]);
   assert.equal(SEED_AUTH_CREDENTIALS[0]?.password, "Toxic0303#");
+});
+
+test("provider exposes approved account count without persisting a dedicated count", () => {
+  const storage = installLocalStorageStub({
+    royal_supremacy_schema_version: MVP_STORAGE_VERSION,
+    royal_supremacy_auth_accounts: JSON.stringify([{ id: "auth_kingchoou" }]),
+  });
+
+  const html = renderToStaticMarkup(
+    React.createElement(
+      AppProvider,
+      null,
+      React.createElement(ApprovedAccountCountProbe),
+    ),
+  );
+
+  assert.equal(html, "<output>1</output>");
+  assert.equal(storage.has("royal_supremacy_approvedAccountCount"), false);
 });

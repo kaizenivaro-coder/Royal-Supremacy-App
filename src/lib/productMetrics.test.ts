@@ -8,14 +8,15 @@ test("counts approved accounts and active or archived roster members separately"
     members: [
       { id: "king", status: "Active", authUserId: "auth_kingchoou" },
       { id: "void", status: "Active" },
-      { id: "former", status: "Archived" },
+      { id: "trial", status: "Trial", lifecycleStatus: "Active" },
+      { id: "former", status: "Left", lifecycleStatus: "Archived" },
     ],
     pendingAccountRequests: [{ id: "request_1" }],
   });
 
   assert.deepEqual(metrics, {
     approvedAccountCount: 1,
-    activeRosterCount: 2,
+    activeRosterCount: 3,
     archivedRosterCount: 1,
     pendingAccountCount: 1,
   });
