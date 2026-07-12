@@ -86,6 +86,7 @@ interface AssignTeamResult {
 }
 
 interface AppContextType extends AppState {
+  approvedAccountCount: number;
   setMembers: (members: Member[]) => void;
   setAnnouncements: (announcements: Announcement[]) => void;
   setTryouts: (tryouts: Tryout[]) => void;
@@ -977,6 +978,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         privateStrategyPlacementsByUser,
         strategyEditorUsernames,
         pendingAccountRequests,
+        approvedAccountCount: authAccounts.length,
         isAdmin,
         authUser,
         setMembers,
