@@ -119,6 +119,26 @@ function StackedOverlayHarness() {
   );
 }
 
+function EscapeConsumerHarness() {
+  const [open, setOpen] = useState(true);
+
+  return React.createElement(
+    FocusedDialog,
+    {
+      open,
+      title: "Command dialog",
+      onClose: () => setOpen(false),
+    },
+    React.createElement("input", {
+      "aria-label": "Command input",
+      onKeyDown: (event: React.KeyboardEvent<HTMLInputElement>) => {
+        if (event.key === "Escape") event.preventDefault();
+      },
+    }),
+    React.createElement("button", { type: "button" }, "Plain action"),
+  );
+}
+
 afterEach(() => {
   cleanup();
   document.body.innerHTML = "";
@@ -158,6 +178,7 @@ test("FocusedDialog mounts labelled modal content in a body portal", async () =>
   assert.match(dialog.innerHTML, /lucide-arrow-left/);
   assert.match(dialog.className, /rounded-lg/);
   assert.match(dialog.className, /bg-\[#071425\]/);
+  assert.match(dialog.className, /w-\[calc\(100%-2rem\)\]/);
   assert.match(dialog.innerHTML, /overflow-y-auto/);
   assert.match(dialog.innerHTML, /sticky bottom-0/);
 });
@@ -202,24 +223,29 @@ test("FocusedDialog closes only from a direct backdrop interaction", async () =>
   assert.equal(closeCount, 1);
 });
 
-test("Escape dismissal ignores consumed and composing keyboard events", async () => {
+test("a focused descendant can consume Escape before the dialog closes", async () => {
+  const user = userEvent.setup({ document });
+  const view = render(React.createElement(EscapeConsumerHarness));
+  const input = await view.findByRole("textbox", { name: "Command input" });
+
+  await user.click(input);
+  await user.keyboard("{Escape}");
+
+  assert.ok(view.getByRole("dialog", { name: "Command dialog" }));
+  assert.equal(document.activeElement, input);
+});
+
+test("composing Escape is ignored and unconsumed Escape closes", async () => {
   const user = userEvent.setup({ document });
   const view = render(React.createElement(OverlayHarness));
   await user.click(view.getByRole("button", { name: "Open overlay" }));
-  await view.findByRole("dialog");
+  const action = await view.findByRole("button", { name: "First action" });
+  action.focus();
 
-  const consumeEscape = (event: KeyboardEvent) => {
-    if (event.key === "Escape") event.preventDefault();
-  };
-  window.addEventListener("keydown", consumeEscape, { capture: true });
-  fireEvent.keyDown(document, { key: "Escape" });
-  assert.ok(view.getByRole("dialog"));
-  window.removeEventListener("keydown", consumeEscape, { capture: true });
-
-  fireEvent.keyDown(document, { key: "Escape", isComposing: true });
+  fireEvent.keyDown(action, { key: "Escape", isComposing: true });
   assert.ok(view.getByRole("dialog"));
 
-  fireEvent.keyDown(document, { key: "Escape" });
+  fireEvent.keyDown(action, { key: "Escape" });
   await waitFor(() => assert.equal(view.queryByRole("dialog"), null));
 });
 
@@ -235,7 +261,7 @@ test("stacked overlays dismiss only the topmost and keep body scrolling locked",
     assert.equal(getComputedStyle(document.body).overflow, "hidden"),
   );
 
-  fireEvent.keyDown(document, { key: "Escape" });
+  await user.keyboard("{Escape}");
   await waitFor(() =>
     assert.equal(
       view.queryByRole("dialog", { name: "Second dialog" }),
@@ -245,9 +271,44 @@ test("stacked overlays dismiss only the topmost and keep body scrolling locked",
   assert.ok(view.getByRole("dialog", { name: "First dialog" }));
   assert.equal(getComputedStyle(document.body).overflow, "hidden");
 
-  fireEvent.keyDown(document, { key: "Escape" });
+  await user.keyboard("{Escape}");
   await waitFor(() => assert.equal(view.queryByRole("dialog"), null));
   assert.notEqual(getComputedStyle(document.body).overflow, "hidden");
+});
+
+test("stacked portals use isolated ordered layers with interactive children", async () => {
+  const user = userEvent.setup({ document });
+  const view = render(React.createElement(StackedOverlayHarness));
+  await user.click(
+    await view.findByRole("button", { name: "Open second dialog" }),
+  );
+  await view.findByRole("dialog", { name: "Second dialog" });
+
+  const layers = Array.from(
+    document.querySelectorAll<HTMLElement>("[data-overlay-layer]"),
+  );
+  assert.equal(layers.length, 2);
+  for (const layer of layers) {
+    assert.match(layer.className, /fixed/);
+    assert.match(layer.className, /isolate/);
+    assert.match(layer.className, /pointer-events-none/);
+    assert.match(layer.className, /z-\[100\]/);
+    assert.match(
+      layer.querySelector<HTMLElement>("[data-overlay-backdrop]")?.className ??
+        "",
+      /pointer-events-auto/,
+    );
+    assert.match(
+      layer.querySelector<HTMLElement>('[role="dialog"]')?.className ?? "",
+      /pointer-events-auto/,
+    );
+  }
+  assert.ok(
+    layers[0].compareDocumentPosition(layers[1]) &
+      Node.DOCUMENT_POSITION_FOLLOWING,
+  );
+  assert.match(layers[0].textContent ?? "", /First dialog/);
+  assert.match(layers[1].textContent ?? "", /Second dialog/);
 });
 
 test("FocusedDialog contains keyboard focus while tabbing", async () => {
@@ -283,6 +344,8 @@ test("MobileSheet is bottom anchored on mobile and centered on desktop", async (
   assert.ok(backdrop);
   assert.match(backdrop.className, /backdrop-blur/);
   assert.match(dialog.className, /bottom-0/);
+  assert.match(dialog.className, /w-full/);
+  assert.doesNotMatch(dialog.className, /w-\[calc\(100%-2rem\)\]/);
   assert.match(dialog.className, /md:top-1\/2/);
   assert.match(dialog.className, /rounded-t-lg/);
   assert.match(dialog.className, /md:rounded-lg/);
@@ -299,4 +362,12 @@ test("global CSS resets motion and delay timing for reduced motion", () => {
   assert.match(css, /animation-delay:\s*0ms !important/);
   assert.match(css, /transition-duration:\s*0\.01ms !important/);
   assert.match(css, /transition-delay:\s*0ms !important/);
+});
+
+test("package engine documents the jsdom Node runtime floor", () => {
+  const packageJson = JSON.parse(
+    readFileSync(new URL("../../package.json", import.meta.url), "utf8"),
+  ) as { engines?: { node?: string } };
+
+  assert.equal(packageJson.engines?.node, ">=20.19");
 });
