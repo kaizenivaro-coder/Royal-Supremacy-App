@@ -972,7 +972,7 @@ export default function Admin() {
               MVP Data Core
             </h2>
             <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
-              Reset local roster, announcements, tryouts, and notifications while
+              Reset local roster, announcements, and notifications while
               preserving the current auth account.
             </p>
             <Button
@@ -980,7 +980,7 @@ export default function Admin() {
               className="mt-6 gap-2"
               onClick={() => {
                 const confirmed = window.confirm(
-                  "Reset local MVP data? This restores seeded roster, announcements, tryouts, teams, RP, and rank history.",
+                  "Reset local MVP data? This restores seeded roster, announcements, teams, RP, and rank history.",
                 );
                 if (confirmed) resetData();
               }}
