@@ -1,5 +1,16 @@
 @import "tailwindcss";
 
+:root {
+  --mobile-bottom-nav-height: 72px;
+  --focus-ring: 0 0 0 3px rgb(75 174 255 / 0.42);
+}
+
+:focus-visible {
+  outline: 2px solid #60b8ff;
+  outline-offset: 3px;
+  box-shadow: var(--focus-ring);
+}
+
 @theme {
   --color-background: #030712;
   --color-surface: #071425;
@@ -19,6 +30,39 @@
 
   --shadow-gold: 0 0 20px rgba(212, 175, 55, 0.15);
   --shadow-purple: 0 0 30px rgba(109, 40, 217, 0.2);
+}
+
+.overlay-backdrop-enter {
+  animation: overlay-backdrop-in 180ms ease-out both;
+}
+
+.overlay-enter {
+  animation: overlay-surface-in 220ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes overlay-backdrop-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes overlay-surface-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px) scale(0.985);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
 
 @layer base {
