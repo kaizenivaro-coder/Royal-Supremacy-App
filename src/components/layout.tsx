@@ -6,7 +6,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cn } from "../lib/utils";
 import { useAppStore } from "../data/store";
 import {
@@ -17,6 +17,30 @@ import {
 } from "../config/navigation";
 import { SquadLogoPlaceholder } from "./SquadLogoPlaceholder";
 import { MobileSheet } from "./overlays";
+import type { ShellOutletContext } from "./shellContext";
+
+function readDesktopSidebarCollapsed() {
+  if (typeof window === "undefined") return false;
+
+  try {
+    return window.localStorage.getItem("royal_supremacy_sidebar_collapsed") === "true";
+  } catch {
+    return false;
+  }
+}
+
+function writeDesktopSidebarCollapsed(collapsed: boolean) {
+  if (typeof window === "undefined") return;
+
+  try {
+    window.localStorage.setItem(
+      "royal_supremacy_sidebar_collapsed",
+      String(collapsed),
+    );
+  } catch {
+    // Sidebar preference is optional when browser storage is unavailable.
+  }
+}
 
 type SidebarContentProps = {
   navigation: readonly NavigationItem[];
@@ -267,8 +291,9 @@ function MoreNavigationSheet({
 
 export default function RootLayout() {
   const [moreOpen, setMoreOpen] = useState(false);
-  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(() =>
-    localStorage.getItem("royal_supremacy_sidebar_collapsed") === "true",
+  const [shellImmersive, setShellImmersive] = useState(false);
+  const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(
+    readDesktopSidebarCollapsed,
   );
   const location = useLocation();
   const { authUser, isAdmin, logout, squadLogoSrc } = useAppStore();
@@ -280,47 +305,65 @@ export default function RootLayout() {
     (item) => item.path === location.pathname,
   )?.name ?? "Royal Supremacy";
 
+  useEffect(() => {
+    setMoreOpen(false);
+
+    if (typeof window !== "undefined" && typeof window.scrollTo === "function") {
+      window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    }
+  }, [location.key]);
+
+  useEffect(() => {
+    if (shellImmersive) setMoreOpen(false);
+  }, [shellImmersive]);
+
   const toggleDesktopSidebar = () => {
     setDesktopSidebarCollapsed((current) => {
       const next = !current;
-      localStorage.setItem("royal_supremacy_sidebar_collapsed", String(next));
+      writeDesktopSidebarCollapsed(next);
       return next;
     });
   };
 
+  const outletContext: ShellOutletContext = { setShellImmersive };
+
   return (
     <div className="flex min-h-screen bg-background text-text-white">
-      <MobileAppBar
-        currentPageTitle={currentPageTitle}
-        moreOpen={moreOpen}
-        onOpenMore={() => setMoreOpen(true)}
-        squadLogoSrc={squadLogoSrc}
-      />
+      {!shellImmersive ? (
+        <>
+          <MobileAppBar
+            currentPageTitle={currentPageTitle}
+            moreOpen={moreOpen}
+            onOpenMore={() => setMoreOpen(true)}
+            squadLogoSrc={squadLogoSrc}
+          />
 
-      <MobileBottomNavigation navigation={mobilePrimaryNavigation} />
+          <MobileBottomNavigation navigation={mobilePrimaryNavigation} />
 
-      <MoreNavigationSheet
-        navigation={moreNavigation}
-        onClose={() => setMoreOpen(false)}
-        onLogout={logout}
-        open={moreOpen}
-      />
+          <MoreNavigationSheet
+            navigation={moreNavigation}
+            onClose={() => setMoreOpen(false)}
+            onLogout={logout}
+            open={moreOpen}
+          />
 
-      <aside className={cn("fixed inset-y-0 left-0 z-40 hidden h-screen shrink-0 overflow-y-auto border-r border-white/5 bg-surface transition-[width] duration-300 lg:block", desktopSidebarCollapsed ? "w-20" : "w-64")}>
-        <SidebarContent
-          navigation={desktopNavigation}
-          pathname={location.pathname}
-          commanderName={commanderName}
-          squadLogoSrc={squadLogoSrc}
-          onLogout={logout}
-          collapsed={desktopSidebarCollapsed}
-          onToggleCollapsed={toggleDesktopSidebar}
-        />
-      </aside>
+          <aside className={cn("fixed inset-y-0 left-0 z-40 hidden h-screen shrink-0 overflow-y-auto border-r border-white/5 bg-surface transition-[width] duration-300 lg:block", desktopSidebarCollapsed ? "w-20" : "w-64")}>
+            <SidebarContent
+              navigation={desktopNavigation}
+              pathname={location.pathname}
+              commanderName={commanderName}
+              squadLogoSrc={squadLogoSrc}
+              onLogout={logout}
+              collapsed={desktopSidebarCollapsed}
+              onToggleCollapsed={toggleDesktopSidebar}
+            />
+          </aside>
+        </>
+      ) : null}
 
-      <main className={cn("min-h-screen w-full flex-1 pb-[calc(var(--mobile-bottom-nav-height)+env(safe-area-inset-bottom)+16px)] pt-14 transition-[padding-left] duration-300 lg:pb-0 lg:pt-0", desktopSidebarCollapsed ? "lg:pl-20" : "lg:pl-64")}>
+      <main className={cn("min-h-screen w-full flex-1 transition-[padding-left] duration-300", shellImmersive ? "p-0" : "pb-[calc(var(--mobile-bottom-nav-height)+env(safe-area-inset-bottom)+16px)] pt-14 lg:pb-0 lg:pt-0", !shellImmersive && (desktopSidebarCollapsed ? "lg:pl-20" : "lg:pl-64"))}>
         <div className="mx-auto max-w-7xl p-4 sm:p-6 lg:p-8">
-          <Outlet />
+          <Outlet context={outletContext} />
         </div>
       </main>
     </div>

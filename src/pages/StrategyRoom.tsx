@@ -23,6 +23,7 @@ import { HeroIcon } from "../components/HeroIcon";
 import { StrategyHeroMenu } from "../components/StrategyHeroMenu";
 import { StrategyMovementOverlay } from "../components/StrategyMovementOverlay";
 import { Button, Input } from "../components/ui";
+import { useShellImmersion } from "../components/shellContext";
 import { useAppStore } from "../data/store";
 import {
   canEditPublicStrategy,
@@ -839,6 +840,7 @@ export default function StrategyRoom() {
     : null;
   const fullscreenControlActive = isFullscreen || immersiveFallback;
   const mapImmersive = fullscreenControlActive || mobileImmersive;
+  useShellImmersion(mapImmersive);
 
   return (
     <section className="strategy-room space-y-4">

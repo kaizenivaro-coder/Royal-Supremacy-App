@@ -297,10 +297,15 @@ function getInitialMembers(authUser: AuthUser | null): Member[] {
   return ensureAuthUserInRoster(createSeedMembers(), authUser);
 }
 
-export function runMvpMigration(storage: MvpMigrationStorage = localStorage) {
+export function runMvpMigration(storage?: MvpMigrationStorage) {
+  const migrationStorage = storage ?? (
+    typeof localStorage !== "undefined" ? localStorage : null
+  );
+  if (!migrationStorage) return;
+
   try {
     const schemaVersionKey = storageKey("schema_version");
-    const rawSchemaVersion = storage.getItem(schemaVersionKey);
+    const rawSchemaVersion = migrationStorage.getItem(schemaVersionKey);
     let storedSchemaVersion = rawSchemaVersion;
 
     if (rawSchemaVersion && rawSchemaVersion !== MVP_STORAGE_VERSION) {
@@ -313,10 +318,15 @@ export function runMvpMigration(storage: MvpMigrationStorage = localStorage) {
       }
     }
 
-    RETIRED_STORAGE_KEYS.forEach((key) => storage.removeItem(storageKey(key)));
+    RETIRED_STORAGE_KEYS.forEach((key) =>
+      migrationStorage.removeItem(storageKey(key)),
+    );
 
     if (storedSchemaVersion !== MVP_STORAGE_VERSION) {
-      storage.setItem(schemaVersionKey, JSON.stringify(MVP_STORAGE_VERSION));
+      migrationStorage.setItem(
+        schemaVersionKey,
+        JSON.stringify(MVP_STORAGE_VERSION),
+      );
     }
   } catch {
     // Local storage can be unavailable in private contexts; the in-memory defaults still work.

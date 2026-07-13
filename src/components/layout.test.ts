@@ -3,8 +3,15 @@ import test, { after, afterEach } from "node:test";
 import { JSDOM } from "jsdom";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { MemoryRouter, Route, Routes } from "react-router-dom";
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useNavigate,
+  type NavigateFunction,
+} from "react-router-dom";
 import { AppProvider } from "../data/store.tsx";
+import { useShellImmersion } from "./shellContext.ts";
 
 const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>", {
   url: "http://localhost/",
@@ -42,7 +49,14 @@ Object.defineProperty(globalThis, "IS_REACT_ACT_ENVIRONMENT", {
   value: true,
 });
 
-const { cleanup, render, waitFor, within } = await import("@testing-library/react");
+let scrollToCalls: unknown[][] = [];
+Object.defineProperty(dom.window, "scrollTo", {
+  configurable: true,
+  writable: true,
+  value: (...args: unknown[]) => scrollToCalls.push(args),
+});
+
+const { act, cleanup, render, waitFor, within } = await import("@testing-library/react");
 const userEvent = (await import("@testing-library/user-event")).default;
 const RootLayout = (await import("./layout.tsx")).default;
 
@@ -94,12 +108,93 @@ function mountLayout(pathname = "/") {
   );
 }
 
+function mountNavigableLayout() {
+  let navigate: NavigateFunction | undefined;
+
+  function NavigationProbe() {
+    navigate = useNavigate();
+    return React.createElement("section", null, "Page content");
+  }
+
+  const screen = render(
+    React.createElement(
+      AppProvider,
+      null,
+      React.createElement(
+        MemoryRouter,
+        { initialEntries: ["/", "/teams"], initialIndex: 1 },
+        React.createElement(
+          Routes,
+          null,
+          React.createElement(
+            Route,
+            { path: "/", element: React.createElement(RootLayout) },
+            React.createElement(Route, {
+              path: "*",
+              element: React.createElement(NavigationProbe),
+            }),
+          ),
+        ),
+      ),
+    ),
+  );
+
+  const getNavigate = () => {
+    assert.ok(navigate);
+    return navigate;
+  };
+
+  return { screen, getNavigate };
+}
+
+function mountImmersiveLayout() {
+  function ImmersionProbe() {
+    const [immersive, setImmersive] = React.useState(false);
+    useShellImmersion(immersive);
+
+    return React.createElement(
+      "section",
+      null,
+      React.createElement(
+        "button",
+        { type: "button", onClick: () => setImmersive(!immersive) },
+        immersive ? "Exit immersive" : "Enter immersive",
+      ),
+      "Strategy map",
+    );
+  }
+
+  return render(
+    React.createElement(
+      AppProvider,
+      null,
+      React.createElement(
+        MemoryRouter,
+        { initialEntries: ["/strategy"] },
+        React.createElement(
+          Routes,
+          null,
+          React.createElement(
+            Route,
+            { path: "/", element: React.createElement(RootLayout) },
+            React.createElement(Route, {
+              path: "strategy",
+              element: React.createElement(ImmersionProbe),
+            }),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
 afterEach(() => {
   cleanup();
   document.body.innerHTML = "";
   document.body.removeAttribute("data-scroll-locked");
   document.body.style.cssText = "";
   dom.window.localStorage.clear();
+  scrollToCalls = [];
 });
 
 after(() => {
@@ -114,6 +209,28 @@ test("desktop sidebar stays pinned while page content scrolls", () => {
   assert.match(html, /class="[^"]*\bfixed\b[^"]*\binset-y-0\b[^"]*\bleft-0\b[^"]*\blg:block/);
   assert.match(html, /class="[^"]*\blg:pl-64\b/);
   assert.doesNotMatch(html, /MVP Command/);
+});
+
+test("layout renders when browser storage globals are unavailable", () => {
+  const savedWindow = globalThis.window;
+  const savedLocalStorage = globalThis.localStorage;
+
+  Reflect.deleteProperty(globalThis, "window");
+  Reflect.deleteProperty(globalThis, "localStorage");
+
+  try {
+    assert.doesNotThrow(() => renderLayout("/leaderboard"));
+  } finally {
+    Object.defineProperty(globalThis, "window", {
+      configurable: true,
+      writable: true,
+      value: savedWindow,
+    });
+    Object.defineProperty(globalThis, "localStorage", {
+      configurable: true,
+      value: savedLocalStorage,
+    });
+  }
 });
 
 test("mobile primary navigation exposes exactly five one-tap destinations", () => {
@@ -214,6 +331,72 @@ test("More sheet closes after navigation and only shows Admin Portal to admins",
 
   const adminSheet = await admin.findByRole("dialog", { name: "More" });
   assert.ok(within(adminSheet).getByRole("link", { name: "Admin Portal" }));
+});
+
+test("More closes on programmatic navigation and browser history changes", async () => {
+  installLocalStorageStub();
+  const user = userEvent.setup({ document });
+  const { screen, getNavigate } = mountNavigableLayout();
+
+  await user.click(screen.getByRole("button", { name: "Open more navigation" }));
+  assert.ok(await screen.findByRole("dialog", { name: "More" }));
+
+  act(() => getNavigate()("/profile"));
+  await waitFor(() => assert.equal(screen.queryByRole("dialog", { name: "More" }), null));
+
+  await user.click(screen.getByRole("button", { name: "Open more navigation" }));
+  assert.ok(await screen.findByRole("dialog", { name: "More" }));
+
+  act(() => getNavigate()(-1));
+  await waitFor(() => assert.equal(screen.queryByRole("dialog", { name: "More" }), null));
+});
+
+test("route changes reset scroll for bottom navigation and browser Back", async () => {
+  installLocalStorageStub();
+  const user = userEvent.setup({ document });
+  const { screen, getNavigate } = mountNavigableLayout();
+  scrollToCalls = [];
+
+  await user.click(
+    within(
+      screen.getByRole("navigation", { name: "Primary navigation" }),
+    ).getByRole("link", { name: "Profile" }),
+  );
+  await waitFor(() => assert.equal(scrollToCalls.length, 1));
+  assert.deepEqual(scrollToCalls[0], [{ top: 0, left: 0, behavior: "auto" }]);
+
+  scrollToCalls = [];
+  act(() => getNavigate()(-1));
+  await waitFor(() => assert.equal(scrollToCalls.length, 1));
+  assert.deepEqual(scrollToCalls[0], [{ top: 0, left: 0, behavior: "auto" }]);
+});
+
+test("immersive route content removes shell controls and restores them on exit", async () => {
+  installLocalStorageStub();
+  const user = userEvent.setup({ document });
+  const screen = mountImmersiveLayout();
+
+  assert.ok(screen.getByRole("navigation", { name: "Primary navigation" }));
+  assert.ok(screen.getByRole("button", { name: "Open more navigation" }));
+
+  await user.click(screen.getByRole("button", { name: "Enter immersive" }));
+  await waitFor(() =>
+    assert.equal(
+      screen.queryByRole("navigation", { name: "Primary navigation" }),
+      null,
+    ),
+  );
+  assert.equal(
+    screen.queryByRole("button", { name: "Open more navigation" }),
+    null,
+  );
+  assert.match(screen.getByText("Strategy map").textContent ?? "", /Strategy map/);
+
+  await user.click(screen.getByRole("button", { name: "Exit immersive" }));
+  await waitFor(() =>
+    assert.ok(screen.getByRole("navigation", { name: "Primary navigation" })),
+  );
+  assert.ok(screen.getByRole("button", { name: "Open more navigation" }));
 });
 
 test("Sign Out closes More and clears the active session", async () => {
