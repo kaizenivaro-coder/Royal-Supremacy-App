@@ -22,6 +22,9 @@ public final class AppUrlPolicy {
             String fragment = uri.getRawFragment();
             boolean isRoot = path == null || path.isEmpty() || "/".equals(path);
 
+            if (isRoot && fragment != null && fragment.startsWith("/")) {
+                return HOME_URL + "/#" + fragment;
+            }
             if (isRoot && query == null) {
                 return fragment == null ? HOME_URL : HOME_URL + "/#" + fragment;
             }

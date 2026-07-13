@@ -23,6 +23,14 @@ public class AppUrlPolicyTest {
     }
 
     @Test
+    public void preservesExistingHashRoutesWhenOriginHasQuery() {
+        assertEquals(
+                AppUrlPolicy.HOME_URL + "/#/auth",
+                AppUrlPolicy.canonicalize(
+                        AppUrlPolicy.HOME_URL + "/?utm=campaign#/auth"));
+    }
+
+    @Test
     public void movesTrustedLegacyPathsBehindTheRootHash() {
         assertEquals(
                 AppUrlPolicy.HOME_URL + "/#/profile?tab=rank#history",
