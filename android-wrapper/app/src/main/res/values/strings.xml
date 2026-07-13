@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Royal Supremacy</string>
+    <string name="loading">Loading Royal Supremacy</string>
+    <string name="offline_title">Command Link Offline</string>
+    <string name="offline_message">Royal Supremacy could not reach the squad server. Check your connection and try again.</string>
+    <string name="retry">Retry</string>
+    <string name="choose_file">Choose file</string>
+    <string name="file_picker_unavailable">No file picker is available.</string>
+</resources>

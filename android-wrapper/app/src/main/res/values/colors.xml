@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="royal_black">#030712</color>
+    <color name="royal_navy">#07172A</color>
+    <color name="royal_blue">#173A64</color>
+    <color name="royal_gold">#F2C453</color>
+    <color name="royal_gold_pressed">#DCAA3A</color>
+    <color name="royal_text">#D7E3F4</color>
+</resources>

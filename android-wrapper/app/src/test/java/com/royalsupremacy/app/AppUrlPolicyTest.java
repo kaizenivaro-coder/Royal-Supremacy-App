@@ -1,0 +1,33 @@
+package com.royalsupremacy.app;
+
+import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.assertTrue;
+
+import org.junit.Test;
+
+public class AppUrlPolicyTest {
+    @Test
+    public void acceptsTrustedHttpsRoutesQueriesAndFragments() {
+        assertTrue(AppUrlPolicy.isTrusted(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site"));
+        assertTrue(AppUrlPolicy.isTrusted(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site/profile?tab=rank#history"));
+        assertTrue(AppUrlPolicy.isTrusted(
+                "https://ROYAL-SUPREMACY-APP.KAIZENIVARO.CHATGPT.SITE:443/strategy"));
+    }
+
+    @Test
+    public void rejectsUntrustedOrMalformedAddresses() {
+        assertFalse(AppUrlPolicy.isTrusted(
+                "http://royal-supremacy-app.kaizenivaro.chatgpt.site"));
+        assertFalse(AppUrlPolicy.isTrusted("https://evil.example"));
+        assertFalse(AppUrlPolicy.isTrusted(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site.evil.example"));
+        assertFalse(AppUrlPolicy.isTrusted(
+                "https://attacker@royal-supremacy-app.kaizenivaro.chatgpt.site"));
+        assertFalse(AppUrlPolicy.isTrusted(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site:444"));
+        assertFalse(AppUrlPolicy.isTrusted("not a url"));
+        assertFalse(AppUrlPolicy.isTrusted(null));
+    }
+}
