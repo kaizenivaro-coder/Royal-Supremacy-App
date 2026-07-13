@@ -19,6 +19,7 @@ import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebResourceError;
 import android.webkit.WebResourceRequest;
+import android.webkit.WebResourceResponse;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -29,11 +30,15 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.FileNotFoundException;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 9001;
+    private static final byte[] BLOCKED_NAVIGATION_BODY =
+            "Navigation blocked.".getBytes(StandardCharsets.UTF_8);
 
     private FrameLayout rootView;
     private WebView webView;
@@ -92,6 +97,19 @@ public class MainActivity extends Activity {
                     openExternal(target);
                 }
                 return true;
+            }
+
+            @Override
+            public WebResourceResponse shouldInterceptRequest(
+                    WebView view,
+                    WebResourceRequest request) {
+                if (NavigationPolicy.shouldBlockMainFrameRequest(
+                        request.getUrl().toString(),
+                        request.isForMainFrame(),
+                        request.getMethod())) {
+                    return blockedNavigationResponse();
+                }
+                return null;
             }
 
             @Override
@@ -168,6 +186,13 @@ public class MainActivity extends Activity {
     private void loadHome() {
         rendererRecoveryReloadAttempted = false;
         loadUrl(AppUrlPolicy.HOME_URL);
+    }
+
+    private WebResourceResponse blockedNavigationResponse() {
+        return new WebResourceResponse(
+                "text/plain",
+                "UTF-8",
+                new ByteArrayInputStream(BLOCKED_NAVIGATION_BODY));
     }
 
     private void loadUrl(String url) {

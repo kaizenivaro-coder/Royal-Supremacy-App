@@ -28,6 +28,14 @@ public final class NavigationPolicy {
                 && AppUrlPolicy.isTrusted(trackedTopLevelUrl);
     }
 
+    public static boolean shouldBlockMainFrameRequest(
+            String rawUrl,
+            boolean isMainFrame,
+            String requestMethod) {
+        // Origin admission is deliberately independent of GET, POST, or any other method.
+        return isMainFrame && !AppUrlPolicy.isTrusted(rawUrl);
+    }
+
     private static boolean isValidHttpsUrl(String rawUrl) {
         if (rawUrl == null) {
             return false;

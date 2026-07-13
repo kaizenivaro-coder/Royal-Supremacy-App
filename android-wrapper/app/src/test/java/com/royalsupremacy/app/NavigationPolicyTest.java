@@ -36,4 +36,16 @@ public class NavigationPolicyTest {
         assertFalse(NavigationPolicy.isTrackedTopLevelSslFailure(
                 "https://royal-supremacy-app.kaizenivaro.chatgpt.site/other", trackedTopLevelPage));
     }
+
+    @Test
+    public void blocksUntrustedMainFrameRequestsRegardlessOfHttpMethod() {
+        assertTrue(NavigationPolicy.shouldBlockMainFrameRequest(
+                "https://evil.example/form", true, "GET"));
+        assertTrue(NavigationPolicy.shouldBlockMainFrameRequest(
+                "https://evil.example/form", true, "POST"));
+        assertFalse(NavigationPolicy.shouldBlockMainFrameRequest(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site/form", true, "POST"));
+        assertFalse(NavigationPolicy.shouldBlockMainFrameRequest(
+                "https://evil.example/script.js", false, "POST"));
+    }
 }
