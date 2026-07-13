@@ -76,3 +76,19 @@ format used by `formatHeroIconName`, for example:
 
 The current icon set was reused from the local asset bundle
 `MLBB Default Hero Icons`.
+
+## Android APK
+
+The lightweight Android wrapper in `android-wrapper/` opens the current hosted
+Royal Supremacy site in a hardened WebView shell. Production builds use a
+private release key kept outside the repository.
+
+On the signing machine, run:
+
+```powershell
+.\scripts\build-android-release.ps1
+```
+
+The script runs Android unit tests and release lint before writing the signed
+APK to `output/android/Royal-Supremacy-release.apk`. Keep the upload keystore
+and its credential backup secure; future APK updates must use the same key.

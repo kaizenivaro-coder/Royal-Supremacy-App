@@ -7,7 +7,6 @@
     <string name="renderer_recovery_message">Royal Supremacy needs to restore its display. Retry to reconnect your session.</string>
     <string name="untrusted_navigation_message">For your security, Royal Supremacy blocked that page. Retry to return to the command center.</string>
     <string name="retry">Retry</string>
-    <string name="choose_file">Choose file</string>
     <string name="file_picker_unavailable">No file picker is available.</string>
     <string name="capture_unavailable">Camera capture is unavailable. Choose an existing file instead.</string>
     <string name="browser_unavailable">No browser is available.</string>

@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/root_view"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/royal_black">
+    tools:ignore="MergeRootFrame">
 
     <WebView
         android:id="@+id/web_view"
@@ -31,7 +32,8 @@
             android:layout_height="match_parent"
             android:gravity="center"
             android:orientation="vertical"
-            android:padding="24dp">
+            android:padding="24dp"
+            tools:ignore="ScrollViewSize,UselessParent">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -45,7 +47,8 @@
                     android:layout_width="72dp"
                     android:layout_height="72dp"
                     android:contentDescription="@string/app_name"
-                    android:src="@drawable/royal_mark" />
+                    android:scaleType="centerInside"
+                    android:src="@drawable/royal_supremacy_logo" />
 
                 <TextView
                     android:layout_width="wrap_content"

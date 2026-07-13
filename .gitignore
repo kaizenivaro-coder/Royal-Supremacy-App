@@ -5,5 +5,8 @@ coverage/
 output/
 .DS_Store
 *.log
+*.jks
+*.keystore
+keystore.properties
 .env*
 !.env.example

@@ -13,7 +13,7 @@ const clientEntries = [
   "heroes",
   "ranks",
   "strategy",
-  "favicon.svg",
+  "royal-supremacy-logo.png",
   "index.html",
 ];
 
