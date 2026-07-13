@@ -4,8 +4,10 @@
     <string name="loading">Loading Royal Supremacy</string>
     <string name="offline_title">Command Link Offline</string>
     <string name="offline_message">Royal Supremacy could not reach the squad server. Check your connection and try again.</string>
+    <string name="renderer_recovery_message">Royal Supremacy needs to restore its display. Retry to reconnect your session.</string>
     <string name="retry">Retry</string>
     <string name="choose_file">Choose file</string>
     <string name="file_picker_unavailable">No file picker is available.</string>
+    <string name="capture_unavailable">Camera capture is unavailable. Choose an existing file instead.</string>
     <string name="browser_unavailable">No browser is available.</string>
 </resources>

@@ -22,10 +22,10 @@ public final class NavigationPolicy {
                 : Destination.BLOCKED;
     }
 
-    public static boolean isActiveTopLevelSslFailure(String sslErrorUrl, String activeUrl) {
+    public static boolean isTrackedTopLevelSslFailure(String sslErrorUrl, String trackedTopLevelUrl) {
         return sslErrorUrl != null
-                && sslErrorUrl.equals(activeUrl)
-                && AppUrlPolicy.isTrusted(activeUrl);
+                && sslErrorUrl.equals(trackedTopLevelUrl)
+                && AppUrlPolicy.isTrusted(trackedTopLevelUrl);
     }
 
     private static boolean isValidHttpsUrl(String rawUrl) {

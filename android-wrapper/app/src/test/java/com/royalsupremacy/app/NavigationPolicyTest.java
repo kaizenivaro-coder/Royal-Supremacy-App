@@ -26,13 +26,14 @@ public class NavigationPolicyTest {
     }
 
     @Test
-    public void onlyShowsOfflineStateForTheCurrentTrustedPageSslFailure() {
-        String activePage = "https://royal-supremacy-app.kaizenivaro.chatgpt.site/profile";
+    public void onlyShowsOfflineStateForTheTrackedTopLevelPageSslFailure() {
+        String trackedTopLevelPage = "https://royal-supremacy-app.kaizenivaro.chatgpt.site/profile";
 
-        assertTrue(NavigationPolicy.isActiveTopLevelSslFailure(activePage, activePage));
-        assertFalse(NavigationPolicy.isActiveTopLevelSslFailure(
-                "https://cdn.example/script.js", activePage));
-        assertFalse(NavigationPolicy.isActiveTopLevelSslFailure(
-                "https://royal-supremacy-app.kaizenivaro.chatgpt.site/other", activePage));
+        assertTrue(NavigationPolicy.isTrackedTopLevelSslFailure(
+                trackedTopLevelPage, trackedTopLevelPage));
+        assertFalse(NavigationPolicy.isTrackedTopLevelSslFailure(
+                "https://cdn.example/script.js", trackedTopLevelPage));
+        assertFalse(NavigationPolicy.isTrackedTopLevelSslFailure(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site/other", trackedTopLevelPage));
     }
 }

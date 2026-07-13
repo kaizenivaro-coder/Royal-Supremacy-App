@@ -25,6 +25,7 @@ import android.webkit.WebViewClient;
 import android.widget.Button;
 import android.widget.FrameLayout;
 import android.widget.ProgressBar;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.FileNotFoundException;
@@ -38,8 +39,11 @@ public class MainActivity extends Activity {
     private WebView webView;
     private ProgressBar loadingIndicator;
     private View offlineState;
+    private TextView offlineMessage;
     private ValueCallback<Uri[]> filePathCallback;
     private boolean mainFrameFailed;
+    private String trackedTopLevelUrl = AppUrlPolicy.HOME_URL;
+    private boolean rendererRecoveryReloadAttempted;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,6 +54,7 @@ public class MainActivity extends Activity {
         webView = findViewById(R.id.web_view);
         loadingIndicator = findViewById(R.id.loading_indicator);
         offlineState = findViewById(R.id.offline_state);
+        offlineMessage = findViewById(R.id.offline_message);
         Button retryButton = findViewById(R.id.retry_button);
 
         configureEdgeToEdge();
@@ -91,6 +96,9 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
+                if (AppUrlPolicy.isTrusted(url)) {
+                    trackedTopLevelUrl = url;
+                }
                 mainFrameFailed = false;
                 loadingIndicator.setVisibility(View.VISIBLE);
                 offlineState.setVisibility(View.GONE);
@@ -100,6 +108,7 @@ public class MainActivity extends Activity {
             public void onPageFinished(WebView view, String url) {
                 loadingIndicator.setVisibility(View.GONE);
                 if (!mainFrameFailed) {
+                    rendererRecoveryReloadAttempted = false;
                     offlineState.setVisibility(View.GONE);
                 }
             }
@@ -114,14 +123,14 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
-                if (NavigationPolicy.isActiveTopLevelSslFailure(error.getUrl(), view.getUrl())) {
+                if (NavigationPolicy.isTrackedTopLevelSslFailure(error.getUrl(), trackedTopLevelUrl)) {
                     showOffline();
                 }
             }
 
             @Override
             public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
-                recreateWebView(view);
+                recreateWebView(view, detail.didCrash());
                 return true;
             }
         });
@@ -137,6 +146,9 @@ public class MainActivity extends Activity {
                 }
                 filePathCallback = callback;
 
+                if (params.isCaptureEnabled()) {
+                    Toast.makeText(MainActivity.this, R.string.capture_unavailable, Toast.LENGTH_LONG).show();
+                }
                 Intent picker = params.createIntent();
                 picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
@@ -154,15 +166,29 @@ public class MainActivity extends Activity {
     }
 
     private void loadHome() {
+        rendererRecoveryReloadAttempted = false;
+        loadUrl(AppUrlPolicy.HOME_URL);
+    }
+
+    private void loadUrl(String url) {
         mainFrameFailed = false;
         offlineState.setVisibility(View.GONE);
         loadingIndicator.setVisibility(View.VISIBLE);
-        webView.loadUrl(AppUrlPolicy.HOME_URL);
+        webView.loadUrl(url);
     }
 
     private void showOffline() {
+        showOffline(R.string.offline_message);
+    }
+
+    private void showRendererRecovery() {
+        showOffline(R.string.renderer_recovery_message);
+    }
+
+    private void showOffline(int messageResId) {
         mainFrameFailed = true;
         loadingIndicator.setVisibility(View.GONE);
+        offlineMessage.setText(messageResId);
         offlineState.setVisibility(View.VISIBLE);
     }
 
@@ -240,11 +266,12 @@ public class MainActivity extends Activity {
         rootView.requestApplyInsets();
     }
 
-    private void recreateWebView(WebView deadWebView) {
+    private void recreateWebView(WebView deadWebView, boolean didCrash) {
         if (deadWebView != webView) {
             return;
         }
 
+        clearFilePathCallback();
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) webView.getLayoutParams();
         rootView.removeView(webView);
         webView.destroy();
@@ -253,7 +280,15 @@ public class MainActivity extends Activity {
         webView.setId(R.id.web_view);
         rootView.addView(webView, 0, layoutParams);
         configureWebView();
-        loadHome();
+
+        RendererRecoveryPolicy.Action action = RendererRecoveryPolicy.actionFor(
+                didCrash, rendererRecoveryReloadAttempted);
+        if (action == RendererRecoveryPolicy.Action.RELOAD) {
+            rendererRecoveryReloadAttempted = true;
+            loadUrl(RendererRecoveryPolicy.reloadUrl(trackedTopLevelUrl));
+        } else {
+            showRendererRecovery();
+        }
     }
 
     @Override
@@ -288,13 +323,17 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
-        if (filePathCallback != null) {
-            filePathCallback.onReceiveValue(null);
-            filePathCallback = null;
-        }
+        clearFilePathCallback();
         if (isFinishing()) {
             webView.destroy();
         }
         super.onDestroy();
+    }
+
+    private void clearFilePathCallback() {
+        if (filePathCallback != null) {
+            filePathCallback.onReceiveValue(null);
+            filePathCallback = null;
+        }
     }
 }
