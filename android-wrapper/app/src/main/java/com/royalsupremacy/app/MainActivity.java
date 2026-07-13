@@ -3,12 +3,17 @@ package com.royalsupremacy.app;
 import android.app.Activity;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.net.http.SslError;
+import android.os.Build;
 import android.os.Bundle;
+import android.os.Process;
 import android.view.View;
+import android.view.WindowInsets;
 import android.webkit.CookieManager;
+import android.webkit.RenderProcessGoneDetail;
 import android.webkit.SslErrorHandler;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
@@ -18,12 +23,18 @@ import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.widget.Button;
+import android.widget.FrameLayout;
 import android.widget.ProgressBar;
 import android.widget.Toast;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 
 public class MainActivity extends Activity {
     private static final int FILE_CHOOSER_REQUEST = 9001;
 
+    private FrameLayout rootView;
     private WebView webView;
     private ProgressBar loadingIndicator;
     private View offlineState;
@@ -35,11 +46,13 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        rootView = findViewById(R.id.root_view);
         webView = findViewById(R.id.web_view);
         loadingIndicator = findViewById(R.id.loading_indicator);
         offlineState = findViewById(R.id.offline_state);
         Button retryButton = findViewById(R.id.retry_button);
 
+        configureEdgeToEdge();
         configureWebView();
         retryButton.setOnClickListener(view -> loadHome());
 
@@ -56,19 +69,21 @@ public class MainActivity extends Activity {
         settings.setLoadWithOverviewMode(false);
         settings.setSupportZoom(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setAllowFileAccess(false);
 
         CookieManager cookies = CookieManager.getInstance();
         cookies.setAcceptCookie(true);
-        cookies.setAcceptThirdPartyCookies(webView, true);
 
         webView.setWebViewClient(new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
                 Uri target = request.getUrl();
-                if (AppUrlPolicy.isTrusted(target.toString())) {
+                NavigationPolicy.Destination destination = NavigationPolicy.destinationFor(
+                        target.toString(), request.isForMainFrame());
+                if (destination == NavigationPolicy.Destination.WEB_VIEW) {
                     return false;
                 }
-                if (request.isForMainFrame() && "https".equalsIgnoreCase(target.getScheme())) {
+                if (destination == NavigationPolicy.Destination.EXTERNAL) {
                     openExternal(target);
                 }
                 return true;
@@ -99,7 +114,15 @@ public class MainActivity extends Activity {
             @Override
             public void onReceivedSslError(WebView view, SslErrorHandler handler, SslError error) {
                 handler.cancel();
-                showOffline();
+                if (NavigationPolicy.isActiveTopLevelSslFailure(error.getUrl(), view.getUrl())) {
+                    showOffline();
+                }
+            }
+
+            @Override
+            public boolean onRenderProcessGone(WebView view, RenderProcessGoneDetail detail) {
+                recreateWebView(view);
+                return true;
             }
         });
 
@@ -114,16 +137,11 @@ public class MainActivity extends Activity {
                 }
                 filePathCallback = callback;
 
-                Intent picker = new Intent(Intent.ACTION_GET_CONTENT);
-                picker.addCategory(Intent.CATEGORY_OPENABLE);
-                picker.setType("*/*");
-                picker.putExtra(
-                        Intent.EXTRA_ALLOW_MULTIPLE,
-                        params.getMode() == FileChooserParams.MODE_OPEN_MULTIPLE);
+                Intent picker = params.createIntent();
+                picker.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
                 try {
-                    startActivityForResult(Intent.createChooser(picker, getString(R.string.choose_file)),
-                            FILE_CHOOSER_REQUEST);
+                    startActivityForResult(picker, FILE_CHOOSER_REQUEST);
                     return true;
                 } catch (ActivityNotFoundException error) {
                     filePathCallback.onReceiveValue(null);
@@ -150,8 +168,10 @@ public class MainActivity extends Activity {
 
     private void openExternal(Uri uri) {
         Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-        if (intent.resolveActivity(getPackageManager()) != null) {
+        try {
             startActivity(intent);
+        } catch (ActivityNotFoundException error) {
+            Toast.makeText(this, R.string.browser_unavailable, Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -162,8 +182,78 @@ public class MainActivity extends Activity {
             return;
         }
 
-        filePathCallback.onReceiveValue(WebChromeClient.FileChooserParams.parseResult(resultCode, data));
+        Uri[] selectedUris = WebChromeClient.FileChooserParams.parseResult(resultCode, data);
+        filePathCallback.onReceiveValue(sanitizeFileSelection(selectedUris));
         filePathCallback = null;
+    }
+
+    private Uri[] sanitizeFileSelection(Uri[] candidates) {
+        if (candidates == null || candidates.length == 0) {
+            return null;
+        }
+
+        for (Uri uri : candidates) {
+            if (uri == null || !FileSelectionPolicy.isAcceptable(uri.toString(), hasReadAccess(uri))) {
+                return null;
+            }
+        }
+        return candidates;
+    }
+
+    private boolean hasReadAccess(Uri uri) {
+        if (checkUriPermission(
+                uri,
+                Process.myPid(),
+                Process.myUid(),
+                Intent.FLAG_GRANT_READ_URI_PERMISSION) != PackageManager.PERMISSION_GRANTED) {
+            return false;
+        }
+
+        try (InputStream inputStream = getContentResolver().openInputStream(uri)) {
+            return inputStream != null;
+        } catch (FileNotFoundException | SecurityException error) {
+            return false;
+        } catch (IOException error) {
+            return false;
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private void configureEdgeToEdge() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            getWindow().setDecorFitsSystemWindows(false);
+        }
+        rootView.setOnApplyWindowInsetsListener((view, insets) -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                android.graphics.Insets bars = insets.getInsets(
+                        WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout());
+                view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            } else {
+                view.setPadding(
+                        insets.getSystemWindowInsetLeft(),
+                        insets.getSystemWindowInsetTop(),
+                        insets.getSystemWindowInsetRight(),
+                        insets.getSystemWindowInsetBottom());
+            }
+            return insets;
+        });
+        rootView.requestApplyInsets();
+    }
+
+    private void recreateWebView(WebView deadWebView) {
+        if (deadWebView != webView) {
+            return;
+        }
+
+        FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) webView.getLayoutParams();
+        rootView.removeView(webView);
+        webView.destroy();
+
+        webView = new WebView(this);
+        webView.setId(R.id.web_view);
+        rootView.addView(webView, 0, layoutParams);
+        configureWebView();
+        loadHome();
     }
 
     @Override
@@ -173,6 +263,21 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    protected void onPause() {
+        webView.onPause();
+        webView.pauseTimers();
+        super.onPause();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        webView.onResume();
+        webView.resumeTimers();
+    }
+
+    @Override
+    @SuppressWarnings("deprecation")
     public void onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack();

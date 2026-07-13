@@ -7,4 +7,5 @@
     <string name="retry">Retry</string>
     <string name="choose_file">Choose file</string>
     <string name="file_picker_unavailable">No file picker is available.</string>
+    <string name="browser_unavailable">No browser is available.</string>
 </resources>

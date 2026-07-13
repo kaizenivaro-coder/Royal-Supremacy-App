@@ -27,3 +27,12 @@ adb shell am start -n com.royalsupremacy.app/.MainActivity
 ```
 
 The resulting APK is `app/build/outputs/apk/debug/app-debug.apk`.
+
+## QA Scope
+
+The unit suite covers trusted navigation, external-link routing, SSL offline
+state decisions, and file URI admission. Build and lint checks validate the
+native resources and manifest. Physical Android-device QA remains necessary
+for file-picker grants, Android 15 system-bar insets, renderer recovery, and
+the live site's login and upload flows; this project does not require an
+emulator for those checks.
