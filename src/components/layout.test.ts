@@ -263,6 +263,39 @@ test("layout renders when the storage accessor is blocked", () => {
   }
 });
 
+test("mounted provider stays usable when persistent storage is blocked", async () => {
+  const savedLocalStorage = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "localStorage",
+  );
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    get: () => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    },
+  });
+
+  try {
+    const screen = mountLayout("/leaderboard");
+    await waitFor(() =>
+      assert.ok(
+        screen.getByRole("navigation", { name: "Primary navigation" }),
+      ),
+    );
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 0));
+    });
+    assert.ok(screen.getByRole("button", { name: "Open more navigation" }));
+  } finally {
+    if (savedLocalStorage) {
+      Object.defineProperty(globalThis, "localStorage", savedLocalStorage);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
+  }
+});
+
 test("mobile primary navigation exposes exactly five one-tap destinations", () => {
   installLocalStorageStub();
 

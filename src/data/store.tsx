@@ -176,7 +176,19 @@ function readStorage<T>(key: string, fallback: T): T {
 }
 
 function writeStorage<T>(key: string, value: T) {
-  localStorage.setItem(storageKey(key), JSON.stringify(value));
+  try {
+    localStorage.setItem(storageKey(key), JSON.stringify(value));
+  } catch {
+    // State remains available in memory when persistent storage is blocked.
+  }
+}
+
+function removeStorage(key: string) {
+  try {
+    localStorage.removeItem(storageKey(key));
+  } catch {
+    // State remains available in memory when persistent storage is blocked.
+  }
 }
 
 export function shouldSeedMvpAccounts() {
@@ -641,7 +653,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (user) {
       writeStorage("auth_session", user);
     } else {
-      localStorage.removeItem(storageKey("auth_session"));
+      removeStorage("auth_session");
     }
   };
 
@@ -918,7 +930,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   const resetData = () => {
     [...activeDataKeys, ...RETIRED_STORAGE_KEYS].forEach((key) => {
-      localStorage.removeItem(storageKey(key));
+      removeStorage(key);
     });
     writeStorage("schema_version", MVP_STORAGE_VERSION);
     const nextMembers = getInitialMembers(authUser);
