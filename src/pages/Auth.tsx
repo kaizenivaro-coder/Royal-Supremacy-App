@@ -9,6 +9,7 @@ import {
 } from "lucide-react";
 import { Input, Label } from "../components/ui";
 import { useAppStore } from "../data/store";
+import { createHashRouteHref } from "../lib/appRouting";
 import { normalizeUsername } from "../lib/localAuth";
 import { publicAsset } from "../lib/publicAssets";
 import { cn } from "../lib/utils";
@@ -95,7 +96,7 @@ export default function Auth() {
 
     if (canClearLocalAccountsOnHost(window.location.hostname)) {
       clearLocalAuthStorage(window.localStorage);
-      window.location.replace("/auth");
+      window.location.replace(createHashRouteHref(window.location, "/auth"));
       return;
     }
 

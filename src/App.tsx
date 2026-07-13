@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
+import { HashRouter, Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { AppProvider, useAppStore } from "./data/store";
 import RootLayout from "./components/layout";
 
@@ -17,11 +17,6 @@ import MobilePreview from "./pages/MobilePreview";
 import PausedFeature from "./pages/PausedFeature";
 import Leaderboard from "./pages/Leaderboard";
 import StrategyRoom from "./pages/StrategyRoom";
-
-const routerBasename =
-  import.meta.env.BASE_URL === "/"
-    ? undefined
-    : import.meta.env.BASE_URL.replace(/\/$/, "");
 
 function RequireAuth() {
   const { authUser } = useAppStore();
@@ -47,7 +42,7 @@ function AuthRoute() {
 export default function App() {
   return (
     <AppProvider>
-      <BrowserRouter basename={routerBasename}>
+      <HashRouter>
         <Routes>
           <Route path="/auth" element={<AuthRoute />} />
           <Route path="/mobile-preview" element={<MobilePreview />} />
@@ -68,7 +63,7 @@ export default function App() {
           </Route>
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
-      </BrowserRouter>
+      </HashRouter>
     </AppProvider>
   );
 }
