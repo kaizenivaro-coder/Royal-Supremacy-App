@@ -83,7 +83,7 @@ export function createDashboardAnalyticsCards({
       icon: Shield,
     },
     {
-      label: "Active Members",
+      label: "Squad Members",
       value: String(activeMembers.length),
       detail: "Current squad roster",
       icon: Users,
@@ -110,7 +110,7 @@ const quickPanelCopy: Record<QuickPanel, { title: string; description: string }>
   },
   teams: {
     title: "Teams",
-    description: "Current MVP roster groups and assignment counts.",
+    description: "Current roster groups and assignment counts.",
   },
   profile: {
     title: "Profile",
@@ -267,8 +267,7 @@ export function DashboardQuickActionDialog({
                   `${currentMember?.username ?? "kingchoou"} is going online`}
               </p>
               <p className="mt-3 text-sm font-medium leading-6 text-text-muted">
-                This is a local in-app notification for the MVP. Later it can
-                become a Supabase realtime or push notification.
+                This is a local squad notification stored in this browser.
               </p>
             </div>
           )}
@@ -403,14 +402,14 @@ export default function Dashboard() {
         <div className="relative z-10 grid gap-6 lg:grid-cols-[1.2fr_0.8fr] lg:items-end">
           <div className="max-w-2xl">
             <Badge variant="gold" className="mb-4">
-              MVP Command Center
+              Squad Command
             </Badge>
             <h1 className="font-display text-4xl font-black uppercase leading-none text-white md:text-5xl mlbb-title">
               Royal Supremacy
             </h1>
             <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-text-muted">
-              Player profile, squad teams, announcements, and admin
-              assignment are ready for the first usable squad build.
+              Player profiles, teams, announcements, and assignments reflect
+              the current squad setup.
             </p>
           </div>
 
@@ -507,7 +506,7 @@ export default function Dashboard() {
                 Quick Actions
               </h2>
               <p className="mt-1 text-sm font-semibold text-text-muted">
-                Small controls for the core MVP routes.
+                Controls for the core squad routes.
               </p>
             </div>
             <Button variant="gold" size="sm" className="gap-2" onClick={() => openPanel("notify")}>

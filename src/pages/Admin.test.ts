@@ -8,10 +8,38 @@ import { mockMembers } from "../data/mock.ts";
 import { AppProvider } from "../data/store.tsx";
 import { MVP_STORAGE_VERSION } from "../lib/mvpApp.ts";
 
-function installAdminRenderGlobals() {
+function installAdminRenderGlobals(search = "") {
   const storage = new Map<string, string>([
     ["royal_supremacy_schema_version", MVP_STORAGE_VERSION],
     ["royal_supremacy_isAdmin", JSON.stringify(true)],
+    [
+      "royal_supremacy_auth_accounts",
+      JSON.stringify([
+        {
+          id: "auth_alpha",
+          username: "alpha",
+          passwordHash: "hash_alpha",
+          createdAt: "2026-07-12T00:00:00.000Z",
+        },
+        {
+          id: "auth_bravo",
+          username: "bravo",
+          passwordHash: "hash_bravo",
+          createdAt: "2026-07-12T00:00:00.000Z",
+        },
+      ]),
+    ],
+    [
+      "royal_supremacy_pendingAccountRequests",
+      JSON.stringify([
+        {
+          id: "request_charlie",
+          username: "charlie",
+          passwordHash: "hash_charlie",
+          requestedAt: "2026-07-12T00:00:00.000Z",
+        },
+      ]),
+    ],
   ]);
 
   Object.defineProperty(globalThis, "localStorage", {
@@ -25,8 +53,24 @@ function installAdminRenderGlobals() {
   });
   Object.defineProperty(globalThis, "window", {
     configurable: true,
-    value: { location: { search: "" } },
+    value: { location: { search } },
   });
+}
+
+function renderUnlockedAdmin(search = "") {
+  installAdminRenderGlobals(search);
+
+  return renderToStaticMarkup(
+    React.createElement(
+      AppProvider,
+      null,
+      React.createElement(
+        MemoryRouter,
+        { initialEntries: [`/admin${search}`] },
+        React.createElement(Admin),
+      ),
+    ),
+  );
 }
 
 test("update mythic ranks modal renders focused admin controls for every rank", () => {
@@ -67,22 +111,21 @@ test("admin locked gate exposes an accessible password field", () => {
   assert.match(html, /id="admin-portal-password"/);
   assert.match(html, /name="adminPassword"/);
   assert.match(html, /aria-label="Admin Portal password"/);
+  assert.doesNotMatch(html, /MVP|tryouts/i);
 });
 
-test("active Admin UI does not mention retired tryouts", () => {
-  installAdminRenderGlobals();
+test("admin overview separates truthful account, roster, request, and team metrics", () => {
+  const text = renderUnlockedAdmin().replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
 
-  const html = renderToStaticMarkup(
-    React.createElement(
-      AppProvider,
-      null,
-      React.createElement(
-        MemoryRouter,
-        { initialEntries: ["/admin"] },
-        React.createElement(Admin),
-      ),
-    ),
-  );
+  assert.match(text, /2Approved Accounts/);
+  assert.match(text, /21Active Roster/);
+  assert.match(text, /1Pending Requests/);
+  assert.match(text, /5Teams/);
+});
 
-  assert.doesNotMatch(html, /tryouts/i);
+test("active unlocked Admin overview does not mention MVP or Tryouts", () => {
+  const html = renderUnlockedAdmin();
+  const text = html.replace(/<[^>]+>/g, "").replace(/\s+/g, " ");
+
+  assert.doesNotMatch(text, /MVP|tryouts/i);
 });

@@ -104,7 +104,7 @@ export function AdminLockedGate({
         Admin Portal
       </h1>
       <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
-        Enter the local MVP password to unlock roster assignment and admin tools.
+        Enter the local admin password to unlock roster assignment and admin tools.
       </p>
       <form className="mt-8 space-y-4" onSubmit={onSubmit}>
         <div className="space-y-2 text-left">
@@ -380,6 +380,7 @@ export default function Admin() {
     rankHistory,
     setRankHistory,
     pendingAccountRequests,
+    approvedAccountCount,
     approveAccountRequest,
     rejectAccountRequest,
     updateMythicRanks,
@@ -415,6 +416,7 @@ export default function Admin() {
   const activeSeasonId = seasons.find((season) => season.isActive)?.id ?? ACTIVE_SEASON.id;
   const activeSeason = seasons.find((season) => season.id === activeSeasonId) ?? ACTIVE_SEASON;
   const activeMembers = members.filter((member) => member.lifecycleStatus !== "Archived");
+  const activeRosterCount = activeMembers.length;
   const archivedMembers = members.filter((member) => member.lifecycleStatus === "Archived");
   const activeTeams = teams.filter((team) => !team.archivedAt);
   const adminTeamGroups = groupMembersByTeam(activeMembers, activeTeams);
@@ -814,7 +816,7 @@ export default function Admin() {
       />
       <PageHeader
         title="Admin Portal"
-        description="Local MVP controls for roster assignment and squad broadcasts."
+        description="Squad administration for roster assignments and broadcasts."
       >
         <Button
           variant="danger"
@@ -969,41 +971,48 @@ export default function Admin() {
 
           <Card className="p-6">
             <h2 className="font-display text-xl font-black uppercase text-white">
-              MVP Data Core
+              Local Data
             </h2>
             <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
-              Reset local roster, announcements, and notifications while
-              preserving the current auth account.
+              Reset the local roster, announcements, notifications, squad logo,
+              teams, season and rank records, RP transactions, strategy layouts,
+              editor access, and pending requests. The current auth account is preserved.
             </p>
             <Button
               variant="danger"
               className="mt-6 gap-2"
               onClick={() => {
                 const confirmed = window.confirm(
-                  "Reset local MVP data? This restores seeded roster, announcements, teams, RP, and rank history.",
+                  "Reset Local Data? This restores the roster, announcements, notifications, squad logo, teams, season and rank records, RP transactions, strategy layouts, editor access, and pending requests.",
                 );
                 if (confirmed) resetData();
               }}
             >
               <Trash2 size={18} />
-              Reset MVP Data
+              Reset Local Data
             </Button>
           </Card>
           <Card className="p-6">
             <h2 className="font-display text-xl font-black uppercase text-white">
-              Current Scope
+              Overview
             </h2>
-            <div className="mt-5 grid grid-cols-3 gap-3">
+            <div className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
               <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
-                <p className="text-2xl font-black text-white">{members.length}</p>
+                <p className="text-2xl font-black text-white">{approvedAccountCount}</p>
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  Members
+                  Approved Accounts
                 </p>
               </div>
               <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
-                <p className="text-2xl font-black text-white">{announcements.length}</p>
+                <p className="text-2xl font-black text-white">{activeRosterCount}</p>
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
-                  Posts
+                  Active Roster
+                </p>
+              </div>
+              <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
+                <p className="text-2xl font-black text-white">{pendingAccountRequests.length}</p>
+                <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
+                  Pending Requests
                 </p>
               </div>
               <div className="rounded-lg border border-blue-200/10 bg-background/50 p-4">
@@ -1480,7 +1489,7 @@ export default function Admin() {
               Royal Points Sources
             </h2>
             <p className="mt-3 text-sm font-semibold leading-6 text-text-muted">
-              Source management is staged for the next MVP step. Current transactions already support Royal FunFest, Customs, Supreme Titles, Active Points, Mythic Stars, Manual Adjustments, and new member starting average.
+              Current transactions support Royal FunFest, Customs, Supreme Titles, Active Points, Mythic Stars, Manual Adjustments, and new member starting average.
             </p>
             <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <div className="rounded-lg border border-blue-200/10 bg-background/45 p-4">
@@ -1497,7 +1506,7 @@ export default function Admin() {
               </div>
               <div className="rounded-lg border border-blue-200/10 bg-background/45 p-4">
                 <p className="truncate text-lg font-black text-white">
-                  {seasons.find((season) => season.id === activeSeasonId)?.name ?? "MVP"}
+                  {seasons.find((season) => season.id === activeSeasonId)?.name ?? "Current season"}
                 </p>
                 <p className="text-[10px] font-black uppercase tracking-widest text-text-muted">
                   Active Season
