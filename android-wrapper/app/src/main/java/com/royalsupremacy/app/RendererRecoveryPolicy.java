@@ -16,6 +16,6 @@ public final class RendererRecoveryPolicy {
     }
 
     public static String reloadUrl(String lastTrustedUrl) {
-        return AppUrlPolicy.isTrusted(lastTrustedUrl) ? lastTrustedUrl : AppUrlPolicy.HOME_URL;
+        return AppUrlPolicy.canonicalize(lastTrustedUrl);
     }
 }

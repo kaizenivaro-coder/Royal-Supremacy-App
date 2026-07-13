@@ -23,7 +23,8 @@ public class RendererRecoveryPolicyTest {
     public void reloadsTheLastTrustedPageOrHome() {
         String trustedPage = "https://royal-supremacy-app.kaizenivaro.chatgpt.site/strategy";
 
-        assertEquals(trustedPage, RendererRecoveryPolicy.reloadUrl(trustedPage));
+        assertEquals(AppUrlPolicy.HOME_URL + "/#/strategy",
+                RendererRecoveryPolicy.reloadUrl(trustedPage));
         assertEquals(AppUrlPolicy.HOME_URL, RendererRecoveryPolicy.reloadUrl("https://evil.example"));
     }
 }
