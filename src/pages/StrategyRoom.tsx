@@ -1085,10 +1085,17 @@ export function StrategyExitControl({
   isVisible: boolean;
   onExit: () => void;
 }) {
+  const buttonRef = useRef<HTMLButtonElement>(null);
+
+  useEffect(() => {
+    if (isVisible) buttonRef.current?.focus({ preventScroll: true });
+  }, [isVisible]);
+
   if (!isVisible) return null;
 
   return (
     <button
+      ref={buttonRef}
       type="button"
       onClick={onExit}
       aria-label="Exit strategy room"

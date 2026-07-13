@@ -6,7 +6,7 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "../lib/utils";
 import { useAppStore } from "../data/store";
 import {
@@ -295,6 +295,7 @@ export default function RootLayout() {
   const [desktopSidebarCollapsed, setDesktopSidebarCollapsed] = useState(
     readDesktopSidebarCollapsed,
   );
+  const wasShellImmersiveRef = useRef(false);
   const location = useLocation();
   const { authUser, isAdmin, logout, squadLogoSrc } = useAppStore();
   const commanderName = authUser?.username ?? "Commander";
@@ -315,6 +316,24 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (shellImmersive) setMoreOpen(false);
+
+    if (!shellImmersive && wasShellImmersiveRef.current) {
+      queueMicrotask(() => {
+        if (typeof document === "undefined") return;
+
+        const currentRouteLinks = Array.from(
+          document.querySelectorAll<HTMLAnchorElement>('a[aria-current="page"]'),
+        );
+        const visibleRouteLink = currentRouteLinks.find(
+          (link) => link.getClientRects().length > 0,
+        );
+        (visibleRouteLink ?? currentRouteLinks[0])?.focus({
+          preventScroll: true,
+        });
+      });
+    }
+
+    wasShellImmersiveRef.current = shellImmersive;
   }, [shellImmersive]);
 
   const toggleDesktopSidebar = () => {

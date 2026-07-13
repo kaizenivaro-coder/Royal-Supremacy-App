@@ -11,6 +11,7 @@ import {
   type NavigateFunction,
 } from "react-router-dom";
 import { AppProvider } from "../data/store.tsx";
+import { StrategyExitControl } from "../pages/StrategyRoom.tsx";
 import { useShellImmersion } from "./shellContext.ts";
 
 const dom = new JSDOM("<!doctype html><html><head></head><body></body></html>", {
@@ -155,11 +156,16 @@ function mountImmersiveLayout() {
     return React.createElement(
       "section",
       null,
-      React.createElement(
-        "button",
-        { type: "button", onClick: () => setImmersive(!immersive) },
-        immersive ? "Exit immersive" : "Enter immersive",
-      ),
+      immersive
+        ? React.createElement(StrategyExitControl, {
+            isVisible: true,
+            onExit: () => setImmersive(false),
+          })
+        : React.createElement(
+            "button",
+            { type: "button", onClick: () => setImmersive(true) },
+            "Enter immersive",
+          ),
       "Strategy map",
     );
   }
@@ -230,6 +236,30 @@ test("layout renders when browser storage globals are unavailable", () => {
       configurable: true,
       value: savedLocalStorage,
     });
+  }
+});
+
+test("layout renders when the storage accessor is blocked", () => {
+  const savedLocalStorage = Object.getOwnPropertyDescriptor(
+    globalThis,
+    "localStorage",
+  );
+
+  Object.defineProperty(globalThis, "localStorage", {
+    configurable: true,
+    get: () => {
+      throw new DOMException("Storage blocked", "SecurityError");
+    },
+  });
+
+  try {
+    assert.doesNotThrow(() => renderLayout("/leaderboard"));
+  } finally {
+    if (savedLocalStorage) {
+      Object.defineProperty(globalThis, "localStorage", savedLocalStorage);
+    } else {
+      Reflect.deleteProperty(globalThis, "localStorage");
+    }
   }
 });
 
@@ -391,12 +421,20 @@ test("immersive route content removes shell controls and restores them on exit",
     null,
   );
   assert.match(screen.getByText("Strategy map").textContent ?? "", /Strategy map/);
+  const exitControl = screen.getByRole("button", { name: "Exit strategy room" });
+  assert.equal(document.activeElement, exitControl);
 
-  await user.click(screen.getByRole("button", { name: "Exit immersive" }));
+  await user.click(exitControl);
   await waitFor(() =>
     assert.ok(screen.getByRole("navigation", { name: "Primary navigation" })),
   );
   assert.ok(screen.getByRole("button", { name: "Open more navigation" }));
+  await waitFor(() =>
+    assert.equal(
+      document.activeElement?.getAttribute("aria-current"),
+      "page",
+    ),
+  );
 });
 
 test("Sign Out closes More and clears the active session", async () => {

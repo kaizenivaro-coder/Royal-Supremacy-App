@@ -298,12 +298,12 @@ function getInitialMembers(authUser: AuthUser | null): Member[] {
 }
 
 export function runMvpMigration(storage?: MvpMigrationStorage) {
-  const migrationStorage = storage ?? (
-    typeof localStorage !== "undefined" ? localStorage : null
-  );
-  if (!migrationStorage) return;
-
   try {
+    const migrationStorage = storage ?? (
+      typeof localStorage !== "undefined" ? localStorage : null
+    );
+    if (!migrationStorage) return;
+
     const schemaVersionKey = storageKey("schema_version");
     const rawSchemaVersion = migrationStorage.getItem(schemaVersionKey);
     let storedSchemaVersion = rawSchemaVersion;
