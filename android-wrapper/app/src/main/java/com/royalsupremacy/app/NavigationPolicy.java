@@ -36,6 +36,10 @@ public final class NavigationPolicy {
         return isMainFrame && !AppUrlPolicy.isTrusted(rawUrl);
     }
 
+    public static boolean shouldRejectTopLevelPageStart(String rawUrl) {
+        return !AppUrlPolicy.isTrusted(rawUrl);
+    }
+
     private static boolean isValidHttpsUrl(String rawUrl) {
         if (rawUrl == null) {
             return false;

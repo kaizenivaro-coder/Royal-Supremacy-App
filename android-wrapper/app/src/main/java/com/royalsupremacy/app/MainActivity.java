@@ -114,9 +114,12 @@ public class MainActivity extends Activity {
 
             @Override
             public void onPageStarted(WebView view, String url, Bitmap favicon) {
-                if (AppUrlPolicy.isTrusted(url)) {
-                    trackedTopLevelUrl = url;
+                if (NavigationPolicy.shouldRejectTopLevelPageStart(url)) {
+                    view.stopLoading();
+                    showBlockedNavigation();
+                    return;
                 }
+                trackedTopLevelUrl = url;
                 mainFrameFailed = false;
                 loadingIndicator.setVisibility(View.VISIBLE);
                 offlineState.setVisibility(View.GONE);
@@ -208,6 +211,10 @@ public class MainActivity extends Activity {
 
     private void showRendererRecovery() {
         showOffline(R.string.renderer_recovery_message);
+    }
+
+    private void showBlockedNavigation() {
+        showOffline(R.string.untrusted_navigation_message);
     }
 
     private void showOffline(int messageResId) {

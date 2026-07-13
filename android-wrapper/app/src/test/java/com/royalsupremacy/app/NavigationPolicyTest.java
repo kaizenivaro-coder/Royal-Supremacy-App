@@ -48,4 +48,11 @@ public class NavigationPolicyTest {
         assertFalse(NavigationPolicy.shouldBlockMainFrameRequest(
                 "https://evil.example/script.js", false, "POST"));
     }
+
+    @Test
+    public void rejectsAnUntrustedTopLevelRedirectPageStart() {
+        assertTrue(NavigationPolicy.shouldRejectTopLevelPageStart("https://evil.example/redirect-target"));
+        assertFalse(NavigationPolicy.shouldRejectTopLevelPageStart(
+                "https://royal-supremacy-app.kaizenivaro.chatgpt.site/redirect-target"));
+    }
 }
